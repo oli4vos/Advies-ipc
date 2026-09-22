@@ -8,7 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models
-from ..schemas import CaseCreate, CaseListItem, CaseRead
+from ..schemas import (
+    CaseCreate,
+    CaseListItem,
+    CaseRead,
+    ClaimRead,
+    ExpertReviewRead,
+    PaymentRead,
+)
 from .analysis import analyse
 from .anonymisation import anonymise
 
@@ -27,6 +34,10 @@ CASE_LOAD_OPTIONS = (
     .selectinload(models.AIClaimSource.source),
     selectinload(models.Case.provenance),
     selectinload(models.Case.history),
+    selectinload(models.Case.claims).selectinload(models.ExpertClaim.expert),
+    selectinload(models.Case.payments),
+    selectinload(models.Case.reviews).selectinload(models.ExpertReview.expert),
+    selectinload(models.Case.reviews).selectinload(models.ExpertReview.items),
 )
 
 
@@ -391,6 +402,35 @@ def publish_case(session: Session, case: models.Case) -> models.Case:
     return get_case_or_404(session, case.id)
 
 
+def claim_to_read(claim: models.ExpertClaim) -> ClaimRead:
+    return ClaimRead(
+        id=claim.id,
+        expert_id=claim.expert_id,
+        expert_name=claim.expert.display_name,
+        expert_specialisation="Loonheffingen-specialist",
+        expert_rating=4.8,
+        status=claim.status,
+        match_score=claim.match_score,
+        message=claim.message,
+        created_at=claim.created_at,
+        selected_at=claim.selected_at,
+    )
+
+
+def review_to_read(review: models.ExpertReview) -> ExpertReviewRead:
+    return ExpertReviewRead(
+        id=review.id,
+        expert_id=review.expert_id,
+        expert_name=review.expert.display_name,
+        final_answer=review.final_answer,
+        notes=review.notes,
+        status=review.status,
+        created_at=review.created_at,
+        submitted_at=review.submitted_at,
+        items=review.items,
+    )
+
+
 def case_to_read(case: models.Case, *, include_original: bool) -> CaseRead:
     answer = case.ai_answers[-1] if case.ai_answers else None
     sources = []
@@ -433,6 +473,9 @@ def case_to_read(case: models.Case, *, include_original: bool) -> CaseRead:
         provenance=case.provenance,
         ai_executions=case.ai_executions,
         history=case.history,
+        claims=[claim_to_read(claim) for claim in case.claims],
+        payment=PaymentRead.model_validate(case.payments[-1]) if case.payments else None,
+        reviews=[review_to_read(review) for review in case.reviews],
     )
 
 
@@ -460,8 +503,12 @@ def case_to_list_item(case: models.Case) -> CaseListItem:
     )
 
 
-def list_cases(session: Session, *, status_filter: str | None = None) -> list[models.Case]:
+def list_cases(
+    session: Session, *, status_filter: str | list[str] | None = None
+) -> list[models.Case]:
     statement = select(models.Case).options(*CASE_LOAD_OPTIONS).order_by(models.Case.created_at.desc())
-    if status_filter:
+    if isinstance(status_filter, list):
+        statement = statement.where(models.Case.status.in_(status_filter))
+    elif status_filter:
         statement = statement.where(models.Case.status == status_filter)
     return list(session.scalars(statement).unique())

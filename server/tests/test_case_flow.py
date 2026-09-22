@@ -80,3 +80,62 @@ def test_case_persists_across_database_sessions(client) -> None:
     assert first_count == 1
     assert persisted is not None
     assert persisted.public_code == created["public_code"]
+
+
+def test_claim_selection_payment_and_expert_review_flow(client) -> None:
+    created = client.post("/api/v1/cases", json=PAYLOAD).json()
+    case_id = created["id"]
+    client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    client.post(f"/api/v1/admin/cases/{case_id}/publish")
+
+    claim = client.post(
+        f"/api/v1/cases/{case_id}/claims",
+        json={"message": "Ik kan deze casus binnen één werkdag beoordelen."},
+    )
+    assert claim.status_code == 201, claim.text
+    assert claim.json()["status"] == "PENDING_CUSTOMER"
+
+    selected = client.post(
+        f"/api/v1/cases/{case_id}/claims/{claim.json()['id']}/select"
+    )
+    assert selected.status_code == 200, selected.text
+    assert selected.json()["status"] == "AWAITING_PAYMENT"
+    assert selected.json()["payment"]["status"] == "PENDING"
+
+    paid = client.post(f"/api/v1/cases/{case_id}/pay")
+    assert paid.status_code == 200, paid.text
+    assert paid.json()["status"] == "PAID"
+    assert paid.json()["payment"]["status"] == "PAID"
+
+    reviewed = client.post(
+        f"/api/v1/cases/{case_id}/review",
+        json={
+            "final_answer": (
+                "Laat de loonheffingskorting slechts bij één werkgever toepassen "
+                "en controleer het effect in de aangifte."
+            ),
+            "notes": "De adviseur heeft de conceptanalyse gecontroleerd.",
+            "items": [
+                {
+                    "dimension": "Feiten",
+                    "verdict": "PARTIALLY_CORRECT",
+                    "comment": "Controleer de loonstroken van beide werkgevers.",
+                }
+            ],
+        },
+    )
+    assert reviewed.status_code == 200, reviewed.text
+    final_case = reviewed.json()
+    assert final_case["status"] == "DELIVERED"
+    assert final_case["reviews"][0]["items"][0]["verdict"] == "PARTIALLY_CORRECT"
+    assert any(
+        record["origin_type"] == "HUMAN_FEEDBACK" for record in final_case["provenance"]
+    )
+
+    audit = client.get("/api/v1/admin/audit-logs").json()
+    assert {entry["action"] for entry in audit} >= {
+        "EXPERT_CLAIM_CREATED",
+        "EXPERT_SELECTED",
+        "MOCK_PAYMENT_PAID",
+        "EXPERT_REVIEW_SUBMITTED",
+    }

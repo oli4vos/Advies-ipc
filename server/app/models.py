@@ -85,6 +85,48 @@ class Case(Base):
     history: Mapped[list[CaseStatusHistory]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="CaseStatusHistory.created_at"
     )
+    claims: Mapped[list[ExpertClaim]] = relationship(
+        back_populates="case", cascade="all, delete-orphan", order_by="ExpertClaim.created_at"
+    )
+    payments: Mapped[list[Payment]] = relationship(
+        back_populates="case", cascade="all, delete-orphan", order_by="Payment.created_at"
+    )
+    reviews: Mapped[list[ExpertReview]] = relationship(
+        back_populates="case", cascade="all, delete-orphan", order_by="ExpertReview.created_at"
+    )
+
+
+class ExpertClaim(Base):
+    __tablename__ = "expert_claims"
+    __table_args__ = (UniqueConstraint("case_id", "expert_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    expert_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="PENDING_CUSTOMER")
+    match_score: Mapped[int] = mapped_column(Integer, default=0)
+    message: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    selected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    case: Mapped[Case] = relationship(back_populates="claims")
+    expert: Mapped[User] = relationship()
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    customer_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    amount_cents: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(24), default="PENDING")
+    provider: Mapped[str] = mapped_column(String(40), default="mock")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    case: Mapped[Case] = relationship(back_populates="payments")
+    customer: Mapped[User] = relationship()
 
 
 class RawCaseInput(Base):
@@ -226,6 +268,41 @@ class AIClaim(Base):
     source_links: Mapped[list[AIClaimSource]] = relationship(
         back_populates="claim", cascade="all, delete-orphan"
     )
+
+
+class ExpertReview(Base):
+    __tablename__ = "expert_reviews"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    expert_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    claim_id: Mapped[str] = mapped_column(ForeignKey("expert_claims.id"), index=True)
+    final_answer: Mapped[str] = mapped_column(Text)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="SUBMITTED")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    case: Mapped[Case] = relationship(back_populates="reviews")
+    expert: Mapped[User] = relationship()
+    claim: Mapped[ExpertClaim] = relationship()
+    items: Mapped[list[ExpertReviewItem]] = relationship(
+        back_populates="review", cascade="all, delete-orphan", order_by="ExpertReviewItem.position"
+    )
+
+
+class ExpertReviewItem(Base):
+    __tablename__ = "expert_review_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    review_id: Mapped[str] = mapped_column(ForeignKey("expert_reviews.id"), index=True)
+    ai_claim_id: Mapped[str | None] = mapped_column(ForeignKey("ai_claims.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    dimension: Mapped[str] = mapped_column(String(80))
+    verdict: Mapped[str] = mapped_column(String(40))
+    comment: Mapped[str] = mapped_column(Text, default="")
+
+    review: Mapped[ExpertReview] = relationship(back_populates="items")
 
 
 class Source(Base):

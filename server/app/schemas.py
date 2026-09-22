@@ -90,6 +90,90 @@ class AIExecutionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ClaimRead(BaseModel):
+    id: str
+    expert_id: str
+    expert_name: str
+    expert_specialisation: str
+    expert_rating: float
+    status: str
+    match_score: int
+    message: str
+    created_at: datetime
+    selected_at: datetime | None
+
+
+class PaymentRead(BaseModel):
+    id: str
+    amount_cents: int
+    status: str
+    provider: str
+    created_at: datetime
+    paid_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewItemRead(BaseModel):
+    id: str
+    ai_claim_id: str | None
+    position: int
+    dimension: str
+    verdict: str
+    comment: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExpertReviewRead(BaseModel):
+    id: str
+    expert_id: str
+    expert_name: str
+    final_answer: str
+    notes: str
+    status: str
+    created_at: datetime
+    submitted_at: datetime
+    items: list[ReviewItemRead]
+
+
+class ReviewItemCreate(BaseModel):
+    ai_claim_id: str | None = None
+    dimension: str = Field(max_length=80)
+    verdict: str = Field(max_length=40)
+    comment: str = Field(default="", max_length=2_000)
+
+
+class ExpertReviewCreate(BaseModel):
+    final_answer: str = Field(min_length=20, max_length=20_000)
+    notes: str = Field(default="", max_length=5_000)
+    items: list[ReviewItemCreate] = Field(default_factory=list, max_length=20)
+
+    @field_validator("final_answer", "notes")
+    @classmethod
+    def strip_review_text(cls, value: str) -> str:
+        return value.strip()
+
+
+class ExpertRead(BaseModel):
+    id: str
+    display_name: str
+    specialisation: str
+    rating: float
+    review_count: int
+    active: bool
+
+
+class ClaimCreate(BaseModel):
+    expert_id: str | None = None
+    message: str = Field(default="", max_length=500)
+
+    @field_validator("message")
+    @classmethod
+    def strip_message(cls, value: str) -> str:
+        return value.strip()
+
+
 class CaseRead(BaseModel):
     id: str
     public_code: str
@@ -120,6 +204,9 @@ class CaseRead(BaseModel):
     provenance: list[ProvenanceRead]
     ai_executions: list[AIExecutionRead]
     history: list[HistoryRead]
+    claims: list[ClaimRead]
+    payment: PaymentRead | None
+    reviews: list[ExpertReviewRead]
 
 
 class CaseListItem(BaseModel):

@@ -4,7 +4,17 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .db import get_session
-from .schemas import AnonymisationPreview, AuditLogRead, CaseCreate, CaseListItem, CaseRead
+from .schemas import (
+    AnonymisationPreview,
+    AuditLogRead,
+    CaseCreate,
+    CaseListItem,
+    CaseRead,
+    ClaimCreate,
+    ClaimRead,
+    ExpertRead,
+    ExpertReviewCreate,
+)
 from .services.cases import (
     case_to_list_item,
     case_to_read,
@@ -13,6 +23,14 @@ from .services.cases import (
     get_case_or_404,
     list_cases,
     publish_case,
+    claim_to_read,
+)
+from .services.marketplace import (
+    claim_case,
+    ensure_demo_expert,
+    pay_case,
+    select_claim,
+    submit_review,
 )
 
 
@@ -63,21 +81,71 @@ def admin_publish_case(case_id: str, session: Session = Depends(get_session)) ->
 
 @router.get("/jobboard", response_model=list[CaseListItem])
 def jobboard(session: Session = Depends(get_session)) -> list[CaseListItem]:
-    return [case_to_list_item(case) for case in list_cases(session, status_filter="PUBLISHED")]
+    return [
+        case_to_list_item(case)
+        for case in list_cases(session, status_filter=["PUBLISHED", "CLAIMED"])
+    ]
 
 
 @router.get("/jobboard/{case_id}", response_model=CaseRead)
 def jobboard_case(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
     case = get_case_or_404(session, case_id)
-    if case.status != "PUBLISHED":
+    if case.status not in {"PUBLISHED", "CLAIMED"}:
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Gepubliceerde casus niet gevonden")
     return case_to_read(case, include_original=False)
 
 
+@router.get("/advisors", response_model=list[ExpertRead])
+def advisors(session: Session = Depends(get_session)) -> list[ExpertRead]:
+    expert = ensure_demo_expert(session)
+    return [
+        ExpertRead(
+            id=expert.id,
+            display_name=expert.display_name,
+            specialisation="Loonheffingen-specialist",
+            rating=4.8,
+            review_count=27,
+            active=True,
+        )
+    ]
+
+
+@router.post("/cases/{case_id}/claims", response_model=ClaimRead, status_code=201)
+def create_case_claim(
+    case_id: str, payload: ClaimCreate, session: Session = Depends(get_session)
+) -> ClaimRead:
+    claim = claim_case(session, get_case_or_404(session, case_id), payload)
+    return claim_to_read(claim)
+
+
+@router.post("/cases/{case_id}/claims/{claim_id}/select", response_model=CaseRead)
+def choose_case_claim(
+    case_id: str, claim_id: str, session: Session = Depends(get_session)
+) -> CaseRead:
+    return case_to_read(
+        select_claim(session, get_case_or_404(session, case_id), claim_id),
+        include_original=True,
+    )
+
+
+@router.post("/cases/{case_id}/pay", response_model=CaseRead)
+def pay_for_case(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
+    return case_to_read(pay_case(session, get_case_or_404(session, case_id)), include_original=True)
+
+
+@router.post("/cases/{case_id}/review", response_model=CaseRead)
+def submit_case_review(
+    case_id: str, payload: ExpertReviewCreate, session: Session = Depends(get_session)
+) -> CaseRead:
+    return case_to_read(
+        submit_review(session, get_case_or_404(session, case_id), payload),
+        include_original=True,
+    )
+
+
 @router.get("/admin/audit-logs", response_model=list[AuditLogRead])
 def audit_logs(session: Session = Depends(get_session)) -> list[AuditLogRead]:
     statement = select(models.AuditLog).order_by(models.AuditLog.created_at.desc()).limit(200)
     return list(session.scalars(statement))
-
