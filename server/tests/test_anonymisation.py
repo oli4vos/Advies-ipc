@@ -19,3 +19,13 @@ def test_anonymises_supported_personal_identifiers() -> None:
     assert result.entity_counts["EMAIL"] == 1
     assert result.entity_counts["BSN"] == 1
 
+
+def test_anonymises_a_named_employee_without_consuming_the_sentence() -> None:
+    result = anonymise(
+        "Mijn fictieve medewerker Jan Test werkt bij bedrijfsnaam: Voorbeeld BV."
+    )
+
+    assert "Jan Test" not in result.text
+    assert "werkt bij" in result.text
+    assert result.text.startswith("Mijn fictieve medewerker [PERSOON] werkt bij")
+    assert result.entity_counts["PERSON"] == 1

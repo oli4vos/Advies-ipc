@@ -49,8 +49,11 @@ PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "PERSON",
         re.compile(
-            r"(?i)(?P<prefix>\b(?:mijn naam is|de heer|mevrouw)\s+)"
-            r"(?P<value>[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+){0,3})"
+            r"(?P<prefix>(?i:\b(?:mijn naam is|de heer|mevrouw|"
+            r"mijn (?:fictieve )?medewerker|werknemer(?: genaamd)?|contactpersoon)\s+))"
+            r"(?P<value>[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+"
+            r"(?:\s+(?:(?:de|den|der|van|von|te|ten|ter)\s+){0,2}"
+            r"[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+){0,3})"
         ),
         "[PERSOON]",
     ),
