@@ -5,6 +5,11 @@ frontend/node_modules/
 frontend/.next/
 backend/venv/
 backend/__pycache__/
+server/.venv/
+server/*.db
+server/*.db-*
+server/.pytest_cache/
+server/*.egg-info/
 **/__pycache__/
 .DS_Store
 *.iCloud-backup
