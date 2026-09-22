@@ -1,7 +1,7 @@
 # Architectuurblauwdruk — Fiscaal adviesplatform
 
 Status: richtinggevend ontwerp  
-Versie: 1.0  
+Versie: 1.2
 Datum: 22 september 2026
 
 ## 1. Doel van dit document
@@ -24,12 +24,27 @@ Het platform is geen chatbot. Het is een gecontroleerde fiscale marketplace waar
 2. het platform de informatie structureert en anonimiseert;
 3. de klant de feitelijke structuur bevestigt;
 4. een opdracht op een jobboard wordt gepubliceerd;
-5. een passende adviseur de opdracht accepteert;
-6. de klant betaalt;
-7. de adviseur AI-output, bronnen en feiten controleert;
-8. de klant een menselijk gecontroleerd antwoord ontvangt.
+5. passende adviseurs een besloten aanbod doen;
+6. de klant uit maximaal drie aanbevolen adviseurs kiest;
+7. de gekozen adviseur de opdracht exclusief krijgt en de klant betaalt;
+8. de adviseur AI-output, bronnen en feiten controleert;
+9. de klant een menselijk gecontroleerd antwoord ontvangt.
 
 De kernbelofte is: **rommelige klantinput wordt omgezet in een controleerbare fiscale casus, zonder te doen alsof AI zelfstandig fiscaal advies geeft.**
+
+### 2.1 Juridisch en commercieel model
+
+Het gekozen uitgangspunt is dat het platform **bemiddelaar** is en geen verstrekker van het fiscale advies.
+
+- De overeenkomst voor het fiscale advies ontstaat tussen klant en adviseur.
+- De adviseur blijft inhoudelijk verantwoordelijk voor het definitieve advies en moet passende beroepsaansprakelijkheid hebben.
+- Het platform faciliteert intake, matching, selectie, betaling, facturatie, communicatie en dossierworkflow.
+- Het platform mag de factuur namens de adviseur opstellen en verzenden als dit contractueel, fiscaal en administratief correct is ingericht.
+- De factuur voor de adviesdienst vermeldt de adviseur als leverancier; het platform is verzendende en administratieve tussenpartij.
+- De platformvergoeding wordt afzonderlijk overeengekomen en gefactureerd of als transparante application fee ingehouden.
+- Het platform houdt zelf geen gelden buiten een gereguleerde betaalprovider om.
+
+Dit model moet vóór een pilot worden gevalideerd door een Nederlandse jurist en fiscalist/accountant. De architectuur legt het bedoelde model vast, maar is geen juridisch of fiscaal advies.
 
 ## 3. Architectuurprincipes
 
@@ -57,10 +72,13 @@ De kernbelofte is: **rommelige klantinput wordt omgezet in een controleerbare fi
 8. **Modulaire monoliet vóór microservices**  
    Eén backendapplicatie met domeingrenzen is voor de eerste productfase eenvoudiger te testen, beveiligen en beheren.
 
-9. **Auditbaarheid is onderdeel van het domein**  
+9. **Python is de enige backendtaal**
+   Alle server-side businesslogica, autorisatie, workflows en providerintegraties worden gebouwd in Python met FastAPI. Next.js bevat geen backendbusinesslogica en Supabase Edge Functions worden niet gebruikt.
+
+10. **Auditbaarheid is onderdeel van het domein**
    Belangrijke wijzigingen krijgen actor, tijdstip, reden en oude/nieuwe waarde.
 
-10. **Demo en productie zijn verschillende risicoklassen**  
+11. **Demo en productie zijn verschillende risicoklassen**
     GitHub Pages is uitsluitend een publieke productdemo.
 
 ## 4. Systeemlandschap
@@ -202,19 +220,29 @@ Verantwoordelijk voor:
 - jobboardquery's en filters;
 - uitlegbare matchscore;
 - expertvoorkeuren;
-- claimexclusiviteit;
-- reactietermijnen en eventuele claim-time-outs.
+- besloten aanbiedingen van adviseurs;
+- selectie van maximaal drie passende kandidaten voor de klant;
+- geverifieerde reviews uit betaalde en afgeronde opdrachten;
+- klantselectie en exclusieve toewijzing;
+- reactietermijnen, aanbodverloop en betaal-time-outs.
+
+De bieding is geen openbare veiling. Adviseurs zien elkaars prijs niet en kunnen elkaar niet live onderbieden. Dit beperkt een race naar de laagste prijs en houdt kwaliteit, specialisatie en betrouwbaarheid zichtbaar.
 
 ### 6.6 Payments
 
 Verantwoordelijk voor:
 
-- betaalverzoek na acceptatie;
+- betaalverzoek na klantselectie;
 - providerreferentie;
 - webhookverwerking;
 - idempotentie;
 - refunds en mislukte betalingen;
-- scheiding payment status en case status.
+- application fee voor het platform;
+- uitbetaling aan de adviseur via de betaalprovider;
+- scheiding payment status en case status;
+- koppeling tussen betaaltransactie en facturen.
+
+Het voorkeursmodel is **Mollie Connect for Platforms**: de adviseur is payment owner, terwijl het platform betalingen initieert en een application fee kan ontvangen. Dit past beter bij de rol van bemiddelaar dan Mollie Connect for Marketplaces, waarbij het platform de payment owner en eerste lijn voor refunds en disputes wordt.
 
 ### 6.7 Expert Review & Delivery
 
@@ -418,13 +446,44 @@ Koppelt conclusies aan één of meerdere bronnen. Zonder bron mag een claim niet
 
 ### Marketplace, betaling en review
 
-#### ExpertClaim
+#### ExpertOffer
 
+- `id`
 - `case_id`
 - `expert_id`
-- `claimed_at`
+- `fee_cents`
+- `estimated_delivery_at`
+- `short_motivation`
+- `match_score_snapshot`
+- `terms_version`
+- `status` (`SUBMITTED`, `SHORTLISTED`, `SELECTED`, `DECLINED`, `WITHDRAWN`, `EXPIRED`)
 - `expires_at`
-- `status`
+- `created_at`
+
+Aanbiedingen zijn besloten. Een adviseur ziet niet de prijs of motivatie van andere adviseurs.
+
+#### CaseAssignment
+
+- `case_id`
+- `offer_id`
+- `expert_id`
+- `selected_by_customer_at`
+- `payment_due_at`
+- `status` (`PENDING_PAYMENT`, `ACTIVE`, `EXPIRED`, `CANCELLED`, `COMPLETED`)
+
+Er bestaat maximaal één actieve assignment per casus. Selectie gebeurt atomair; bij uitblijven van betaling verloopt de assignment standaard na 24 uur.
+
+#### ExpertReviewAggregate
+
+- `expert_id`
+- `specialization_id`
+- `verified_review_count`
+- `average_score`
+- `completion_rate`
+- `on_time_rate`
+- `complaint_rate`
+
+Alleen reviews uit betaalde, geleverde opdrachten tellen mee. De selectie toont zowel score als aantal reviews; één vijfsterrenreview mag niet hetzelfde gewicht krijgen als een langdurig trackrecord.
 
 #### Payment
 
@@ -434,10 +493,30 @@ Koppelt conclusies aan één of meerdere bronnen. Zonder bron mag een claim niet
 - `currency`
 - `provider`
 - `provider_reference`
+- `connected_merchant_id`
+- `application_fee_cents`
 - `status`
 - `idempotency_key`
 - `paid_at`
 - `refunded_at`
+
+#### Invoice
+
+- `case_id`
+- `advisor_id`
+- `customer_id`
+- `invoice_number`
+- `supplier_legal_name`
+- `supplier_vat_number`
+- `subtotal_cents`
+- `vat_cents`
+- `total_cents`
+- `issued_by_platform_on_behalf_of_advisor`
+- `pdf_storage_key`
+- `issued_at`
+- `credit_note_for_invoice_id`
+
+De adviseur is leverancier van de adviesdienst. Het platform kan de factuur namens de adviseur genereren en verzenden op basis van een expliciete overeenkomst en correcte factuurgegevens.
 
 #### ExpertReview
 
@@ -501,9 +580,12 @@ erDiagram
     CASE ||--o{ AI_ANSWER : generates
     AI_ANSWER ||--o{ AI_CLAIM : contains
     AI_CLAIM }o--o{ SOURCE : supported_by
-    CASE ||--o{ EXPERT_CLAIM : claimed_by
-    EXPERT_PROFILE ||--o{ EXPERT_CLAIM : makes
+    CASE ||--o{ EXPERT_OFFER : receives
+    EXPERT_PROFILE ||--o{ EXPERT_OFFER : submits
+    CASE ||--o| CASE_ASSIGNMENT : assigned_through
+    EXPERT_OFFER ||--o| CASE_ASSIGNMENT : selected_as
     CASE ||--o{ PAYMENT : paid_through
+    CASE ||--o{ INVOICE : invoiced_through
     CASE ||--o{ EXPERT_REVIEW : reviewed_in
     EXPERT_REVIEW ||--o{ EXPERT_REVIEW_ITEM : contains
     CASE ||--o{ CASE_DOCUMENT : attaches
@@ -520,8 +602,8 @@ stateDiagram-v2
     ANONYMISING --> PENDING_REVIEW: structuur en redactie gereed
     PENDING_REVIEW --> PUBLISHED: klant en/of beheer bevestigt
     PENDING_REVIEW --> DRAFT: correctie nodig
-    PUBLISHED --> CLAIMED: adviseur claimt atomair
-    CLAIMED --> AWAITING_PAYMENT: betaalverzoek aangemaakt
+    PUBLISHED --> CLAIMED: klant selecteert aanbod
+    CLAIMED --> AWAITING_PAYMENT: exclusieve assignment + betaalverzoek
     AWAITING_PAYMENT --> PAID: betaalwebhook bevestigd
     AWAITING_PAYMENT --> PUBLISHED: betaling verloopt / claim vrijgegeven
     PAID --> IN_REVIEW: adviseur start
@@ -540,7 +622,11 @@ stateDiagram-v2
 
 - Statusovergangen gebeuren via domeincommands, niet via een generieke `PATCH status`.
 - Elke overgang heeft actor, reden, timestamp en toegestane vorige status.
-- Claim is atomair; twee adviseurs kunnen niet dezelfde opdracht verkrijgen.
+- Meerdere adviseurs mogen besloten aanbiedingen doen zolang de casus `PUBLISHED` is.
+- De klant ziet maximaal drie door matching en minimumkwaliteit geselecteerde kandidaten.
+- De selectie van één aanbod en het aanmaken van de exclusieve assignment gebeuren atomair.
+- De assignment verloopt standaard na 24 uur zonder betaling; de klant kan daarna een ander aanbod kiezen.
+- Adviseurs zien elkaars aanbod niet en reviews zijn alleen geverifieerd na betaalde, afgeronde opdrachten.
 - `PAID` wordt alleen gezet na een geldige providerwebhook of expliciete mockactie in een testomgeving.
 - `ANSWER_SUBMITTED` vereist afgeronde reviewchecks en een definitief antwoord.
 - Correcties achteraf maken een nieuwe versie; historie wordt niet overschreven.
@@ -639,6 +725,27 @@ De UI toont naast het percentage de bijdragende regels. Hardcoded percentages zi
 
 De vergoeding wordt niet direct door de matchscore bepaald. Een aparte prijsregel gebruikt onder andere complexiteit, geschatte tijd, urgentie en platformmarge.
 
+### 12.1 Besloten aanbod- en selectieflow
+
+1. De casus wordt gepubliceerd met een indicatieve prijsband en maximale reactietermijn.
+2. Passende adviseurs kunnen één besloten aanbod doen met prijs, levertijd en korte motivatie.
+3. Het platform filtert op harde eisen en toont maximaal drie kandidaten.
+4. De klant vergelijkt specialisatie, geverifieerde reviews, voltooiingspercentage, levertijd en totaalprijs.
+5. De klant selecteert één adviseur; dit maakt een exclusieve assignment.
+6. De klant krijgt 24 uur om te betalen.
+7. Bij tijdige betaling wordt de assignment actief; anders vervalt deze en kan de klant opnieuw kiezen.
+
+Er is geen openbare biedhistorie, geen live onderbieding en geen vrije onderhandelingschat. Het platform toont een prijsband en kan een minimumprijs per complexiteitsklasse afdwingen. Zo blijft de flow goedkoop in support en wordt prijsdumping beperkt.
+
+### 12.2 Reviews
+
+- Alleen klanten van betaalde en geleverde opdrachten kunnen reviewen.
+- Eén opdracht levert maximaal één actieve review op.
+- De review wordt gekoppeld aan relevante specialisaties.
+- De score toont altijd het aantal geverifieerde reviews.
+- Klachten, refunds en gegronde correcties beïnvloeden interne kwaliteitsmonitoring.
+- Adviseurs kunnen feitelijke onjuistheden melden, maar reviews niet zelf verwijderen.
+
 ## 13. Bron- en bewijsmodel
 
 Bronhiërarchie:
@@ -685,8 +792,11 @@ POST   /cases/{case_id}/confirm-anonymisation
 GET    /jobboard
 GET    /jobboard/{case_id}
 GET    /jobboard/{case_id}/match
-POST   /jobboard/{case_id}/claim
-DELETE /jobboard/{case_id}/claim
+POST   /jobboard/{case_id}/offers
+GET    /cases/{case_id}/offer-shortlist
+POST   /cases/{case_id}/select-offer
+POST   /offers/{offer_id}/withdraw
+POST   /assignments/{assignment_id}/expire   # systeem/admin
 ```
 
 ### Betaling
@@ -772,6 +882,20 @@ Elke kernpagina ondersteunt:
 - succesvolle bevestiging.
 
 ## 16. Backendstructuur
+
+De backend is blijvend Python-gebaseerd. De richtstack is:
+
+- Python 3.12 of hoger;
+- FastAPI voor HTTP en OpenAPI;
+- Pydantic voor request-, response- en configuratievalidatie;
+- SQLAlchemy 2 voor persistence;
+- Alembic voor databasemigraties;
+- pytest voor unit- en integratietests;
+- httpx voor externe providers;
+- structlog of standaard JSON-logging;
+- een Python-worker pas wanneer achtergrondtaken aantoonbaar nodig zijn.
+
+JavaScript/TypeScript wordt alleen in de frontend gebruikt. Databasefuncties en triggers mogen technische invarianten bewaken, maar bevatten geen primaire marketplace-, betaal- of reviewbusinesslogica.
 
 ```text
 backend/app/
@@ -868,17 +992,59 @@ mock AI en mock payment adapters
 
 ### Productie
 
-Aanbevolen logische opzet:
+Gekozen lean pilotopzet:
 
-- frontend op managed webhosting/CDN;
-- FastAPI in containerhosting;
-- managed PostgreSQL in EU-regio;
-- private objectopslag in EU-regio;
-- secrets manager;
-- centrale logging en error monitoring;
-- aparte staging- en productieomgevingen.
+- **Supabase in een expliciete EU-regio (Frankfurt)** voor PostgreSQL, Auth en private Storage;
+- **één kleine Fly.io Machine in Amsterdam** voor FastAPI en de statisch gebouwde frontend onder hetzelfde domein;
+- **Mollie Connect for Platforms** voor betaling, adviseur-onboarding en application fees;
+- **OpenAI API via een EU-project** alleen voor afgebakende analysefuncties, na goedkeuring van passende dataretentiecontroles;
+- GitHub Actions voor build en deployment;
+- GitHub Pages blijft uitsluitend de gratis publieke demo.
 
-De exacte providerkeuze is een open beslissing.
+De productiefrontend wordt als static export vanuit dezelfde Fly.io-app geserveerd. Dit voorkomt een extra frontendhost, vereenvoudigt cookies en CORS en houdt de providerlijst klein.
+
+### 19.1 Waarom deze providerkeuze
+
+#### Supabase
+
+Supabase combineert Auth, PostgreSQL en private objectopslag. Daardoor zijn geen losse auth-, database- en storageleveranciers nodig. Het project wordt aan een specifieke EU-regio gekoppeld; een algemene regio is niet voldoende voor een harde datalocatiekeuze. Autorisatie blijft dubbel uitgevoerd: Row Level Security in Supabase en objectautorisatie in FastAPI. Supabase is infrastructuur, niet de applicatiebackend: geen Edge Functions en geen primaire businesslogica in database-triggers.
+
+#### Fly.io Amsterdam
+
+De Python/FastAPI-backend is de enige applicatiebackend. Eén kleine machine in regio `ams` is voldoende voor de pilot en serveert ook de statische frontend. Schalen, aparte Python-workers en redundante machines worden pas toegevoegd na aantoonbare belasting of beschikbaarheidseisen.
+
+#### Mollie Connect for Platforms
+
+De adviseur blijft payment owner en wordt door Mollie als merchant geverifieerd. Het platform initieert de betaling en ontvangt een application fee. Dit beperkt eigen payment-compliance en sluit beter aan op de rol van bemiddelaar. Het platform bouwt geen eigen wallet of escrowadministratie.
+
+#### OpenAI EU-project
+
+AI wordt alleen gebruikt na deterministische privacyfilters en alleen voor structurering, classificatie, vergelijking en conceptgeneratie. Voor echte fiscale data is een EU-project met regionale verwerking plus de vereiste dataretentieafspraken een go-livevoorwaarde. Zonder die afspraken blijft de mockprovider actief.
+
+### 19.2 Lean kosten- en supportregels
+
+1. Geen Kubernetes, microservices, Redis, Elasticsearch of vector database in de pilot.
+2. Eén PostgreSQL-database; flexibele analysevelden mogen eerst in gevalideerde `JSONB` staan.
+3. Geen realtime chat. Aanvullende vragen gebruiken gestructureerde berichten en templates.
+4. Geen losse e-mailprovider in de eerste besloten pilot; gebruik in-app notificaties en bestaande domein-SMTP waar verantwoord.
+5. AI draait alleen op expliciete workflowmomenten en nooit bij elke toetsaanslag of pageview.
+6. Gebruik goedkope modellen voor extractie/classificatie en een sterker model alleen voor het conceptantwoord.
+7. Cache AI-resultaten op inputhash en promptversie; dezelfde invoer wordt niet onnodig opnieuw verwerkt.
+8. Hanteer budgetlimieten per casus, per gebruiker en per maand met een kill switch.
+9. Documenten worden niet standaard door AI verwerkt; alleen relevante tekstfragmenten na privacycontrole.
+10. Biedingen hebben vaste velden, maximaal drie kandidaten en geen vrije onderhandelingschat.
+11. Support wordt beperkt met duidelijke statussen, automatische herinneringen, vervaltermijnen en herstelacties.
+12. Voeg pas een externe dienst toe wanneer deze aantoonbaar goedkoper is dan zelf beheren inclusief beveiliging en support.
+
+### 19.3 Kostenopschaling
+
+De pilot begint met minimale capaciteit. Opschaling gebeurt op meetpunten:
+
+- tweede app-instance pas bij beschikbaarheids- of capaciteitsproblemen;
+- achtergrondworker pas wanneer AI/documenttaken HTTP-time-outs veroorzaken;
+- aparte zoekdienst pas wanneer PostgreSQL-filters aantoonbaar onvoldoende zijn;
+- betaalde monitoring pas wanneer logs en uptimechecks onvoldoende zijn;
+- e-mailprovider pas bij volume, afleverproblemen of compliance-eisen.
 
 ## 20. Configuratie
 
@@ -1028,28 +1194,37 @@ Op termijn:
 - modulaire monoliet;
 - REST API;
 - Next.js frontend;
-- FastAPI backend;
-- SQLite lokaal, PostgreSQL voor productie;
+- Python/FastAPI als enige backendstack voor alle businesslogica;
+- geen Node-backend en geen Supabase Edge Functions;
+- juridisch model: platform is bemiddelaar; klant en adviseur sluiten de adviesovereenkomst;
+- facturatie: platform genereert en verzendt namens adviseur, adviseur blijft leverancier;
+- besloten aanbiedingen met maximaal drie kandidaten, gevolgd door klantselectie;
+- exclusieve assignment na selectie, standaard 24 uur betaaltermijn;
+- alleen geverifieerde reviews uit betaalde, afgeronde opdrachten;
+- SQLite lokaal, Supabase PostgreSQL in Frankfurt voor pilot/productie;
+- Supabase Auth en private Storage om leveranciers en beheerlast te consolideren;
+- Fly.io Amsterdam voor één FastAPI-instance en statische productiefrontend;
+- Mollie Connect for Platforms; adviseur blijft payment owner;
+- OpenAI EU-project alleen na passende dataretentieafspraken, anders mock-AI;
 - adapters voor externe providers;
 - regelgebaseerde matching;
 - append-only status- en auditgeschiedenis;
 - GitHub Pages uitsluitend voor fictieve frontenddemo;
-- één logisch onderwerp per commit.
+- één logisch onderwerp per commit;
+- lean pilot zonder microservices, Kubernetes, Redis, vector database of realtime chat.
 
 ### Nog te beslissen
 
-1. Is het platform juridisch alleen bemiddelaar, of contractspartij richting klant?
-2. Wie is verantwoordelijk voor het uiteindelijke advies en de beroepsaansprakelijkheid?
-3. Is een expertclaim exclusief en hoe lang blijft deze zonder betaling geldig?
-4. Wat gebeurt er bij afwijzing, refund, no-show of een ondeugdelijk antwoord?
-5. Welke authenticatieprovider krijgt de voorkeur?
-6. Welke betaalprovider: Mollie of Stripe?
-7. Welke AI-provider en welke gegevens mogen daarheen?
-8. Welke EU-hosting en documentopslag worden gebruikt?
-9. Welke fiscale bronnen mogen juridisch en commercieel worden ontsloten?
-10. Wordt communicatie volledig in-platform, per e-mail of gecombineerd?
-11. Welke adviseurs mogen meedoen en hoe wordt hun vakbekwaamheid geverifieerd?
-12. Welke retentietermijnen gelden voor casussen, documenten, betalingen en auditlogs?
+1. Welke minimumvoorwaarden gelden voor beroepsaansprakelijkheidsverzekering en vakbekwaamheid van adviseurs?
+2. Wie draagt welk risico bij refund, no-show, deadlineoverschrijding of een ondeugdelijk antwoord?
+3. Mag een klant altijd vrij kiezen uit drie kandidaten of mag één duidelijke topmatch direct worden voorgesteld?
+4. Welke minimum- en maximumprijzen gelden per complexiteitsklasse om prijsdumping te voorkomen?
+5. Welke contractuele volmacht is nodig om facturen namens adviseurs op te stellen en te verzenden?
+6. Hoe worden correcties en creditnota's administratief afgehandeld?
+7. Welke fiscale bronnen mogen juridisch en commercieel worden ontsloten?
+8. Welke adviseurs mogen meedoen en hoe wordt hun vakbekwaamheid geverifieerd?
+9. Welke retentietermijnen gelden voor casussen, documenten, betalingen en auditlogs?
+10. Welke beschikbaarheidsdoelstelling rechtvaardigt later redundante hosting?
 
 ## 25. Definitie van productiegeschikt
 
@@ -1068,3 +1243,15 @@ Het platform is pas geschikt voor echte casussen als minimaal is voldaan aan:
 - kritieke klant-, expert- en beheerflows hebben end-to-end-tests.
 
 Tot dat moment blijft de GitHub Pages-versie een publieke demonstratie met uitsluitend fictieve data.
+
+## 26. Officiële referenties bij providerkeuzes
+
+- [Mollie Connect-overzicht](https://docs.mollie.com/docs/connect-overview) — verschil tussen Platforms en Marketplaces, payment ownership, application fees, routing en aansprakelijkheid.
+- [Mollie merchant onboarding](https://docs.mollie.com/docs/connect-onboard-merchants) — OAuth, Client Links en KYB-onboarding van adviseurs.
+- [Mollie payments verwerken](https://docs.mollie.com/docs/connect-process-payments) — payment owner en tokenmodel voor Connect for Platforms.
+- [Supabase-regio's](https://supabase.com/docs/guides/platform/regions) — keuze van een specifieke EU-regio en betekenis voor datalocatie.
+- [Supabase Auth](https://supabase.com/docs/guides/auth) — JWT-authenticatie en integratie met Row Level Security.
+- [Supabase security](https://supabase.com/docs/guides/security) — gedeelde verantwoordelijkheid, EU-hosting en DPA.
+- [Fly.io-regio's](https://fly.io/docs/reference/regions/) — beschikbaarheid van regio `ams` in Amsterdam.
+- [OpenAI API data controls](https://platform.openai.com/docs/models/default-usage-policies-by-endpoint) — EU data residency, regionale verwerking en vereisten voor ZDR/Modified Abuse Monitoring.
+- [Belastingdienst modelovereenkomst bemiddeling](https://download.belastingdienst.nl/belastingdienst/docs/alg_model_bemid_abu_dv10351z2ed.pdf) — voorbeeld waarin een bemiddelaar namens een opdrachtnemer factureert; toepassing op dit platform vereist eigen juridische en fiscale toetsing.
