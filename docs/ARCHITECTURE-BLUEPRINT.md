@@ -1,12 +1,12 @@
 # Architectuurblauwdruk — Fiscaal adviesplatform
 
 Status: richtinggevend ontwerp  
-Versie: 1.2
+Versie: 1.3
 Datum: 22 september 2026
 
 ## 1. Doel van dit document
 
-Dit document beschrijft de samenhang van het volledige platform: productrollen, domeinen, data, statussen, frontend, backend, privacy, AI, matching, betalingen, documenten, deployment en teststrategie.
+Dit document beschrijft de samenhang van het volledige platform: productrollen, domeinen, data, statussen, frontend, backend, privacy, AI, menselijke feedback, toekomstige trainingsdata, matching, betalingen, documenten, deployment en teststrategie.
 
 De blauwdruk maakt steeds onderscheid tussen:
 
@@ -77,6 +77,9 @@ Dit model moet vóór een pilot worden gevalideerd door een Nederlandse jurist e
 
 10. **Auditbaarheid is onderdeel van het domein**
    Belangrijke wijzigingen krijgen actor, tijdstip, reden en oude/nieuwe waarde.
+
+11. **Herkomst vóór hergebruik**
+   Elk inhoudelijk artefact legt vast of het afkomstig is van een klant, expert, externe AI, platform-AI, deterministische regel of externe bron. AI-output wordt nooit overschreven door menselijke correcties: beide versies en hun onderlinge relatie blijven afzonderlijk en reproduceerbaar bewaard. Operationele feedback wordt niet automatisch trainingsdata.
 
 11. **Demo en productie zijn verschillende risicoklassen**
     GitHub Pages is uitsluitend een publieke productdemo.
@@ -285,6 +288,22 @@ Verantwoordelijk voor:
 - test- en demofuncties;
 - operationele dashboards.
 
+### 6.11 Feedback, Provenance & Learning
+
+Verantwoordelijk voor:
+
+- ondubbelzinnige classificatie van klantinput, AI-output, menselijke feedback en externe bronnen;
+- onveranderlijke versies en afleidingsrelaties tussen feiten, claims, antwoorden en correcties;
+- fijnmazige expertannotaties per claim, passage, bron en ontbrekend feit;
+- scheiding tussen inhoudelijke correcties, stijlwijzigingen en procesfeedback;
+- adjudicatie wanneer experts elkaar tegenspreken;
+- toestemming, juridische grondslag, gebruiksdoel en uitsluitingen voor hergebruik;
+- tweede anonimisering en kwaliteitscontrole vóór data-export;
+- reproduceerbare evaluatie- en trainingsdatasets met versies, manifesten en hashes;
+- meetbare vergelijking van modelversies zonder dat productiefeedback direct een model wijzigt.
+
+Deze module is in de operationele applicatie alleen een registratie- en selectielaag. Modeltraining gebeurt nooit in de requestflow van de FastAPI-app en krijgt later een afzonderlijke, gecontroleerde pipeline en opslagomgeving.
+
 ## 7. Kerngegevensmodel
 
 ### Identiteit
@@ -410,21 +429,30 @@ Dit record is nooit hetzelfde als het platform-AI-antwoord.
 
 De redaction map is alleen voor geautoriseerde beheerfuncties beschikbaar.
 
-### Analyse en bronnen
+### Analyse, bronnen en herkomst
 
 #### AIAnswer
 
+- `id`
 - `case_id`
+- `ai_execution_id`
 - `provider`
 - `model`
 - `prompt_version`
 - `answer_text`
+- `answer_schema_version`
+- `input_snapshot_hash`
+- `output_hash`
 - `status`
 - `generated_at`
 
+Een AI-antwoord is immutable. Opnieuw genereren maakt een nieuw record; bestaande output wordt niet aangepast of vervangen.
+
 #### AIClaim
 
+- `id`
 - `ai_answer_id`
+- `claim_key`
 - `claim_text`
 - `certainty`
 - `requires_missing_fact`
@@ -432,17 +460,176 @@ De redaction map is alleen voor geautoriseerde beheerfuncties beschikbaar.
 
 #### Source
 
+- `id`
 - `title`
-- `source_type`
+- `publisher`
+- `source_type` (`LAW`, `POLICY_DECISION`, `PARLIAMENTARY_HISTORY`, `CASE_LAW`, `OFFICIAL_GUIDANCE`, `PROFESSIONAL_LITERATURE`)
+- `authority_level` (`1` tot en met `6` volgens de bronhiërarchie)
+- `jurisdiction`
 - `citation`
 - `version_or_date`
+- `effective_from`
+- `effective_until`
 - `url`
+- `retrieved_at`
+- `content_hash_if_snapshotted`
 - `official`
 - `demo_only`
+- `usage_rights_status`
+- `full_text_storage_allowed`
+
+Een URL alleen is geen stabiele bronverwijzing. Versie, geldigheidsperiode, ophaaldatum en waar toegestaan een hash van de gebruikte snapshot voorkomen dat een later gewijzigde pagina ongemerkt als hetzelfde bewijs geldt.
 
 #### AIClaimSource
 
 Koppelt conclusies aan één of meerdere bronnen. Zonder bron mag een claim niet als hoog-zeker worden gemarkeerd.
+
+#### AIExecution
+
+Legt één reproduceerbare AI-aanroep vast:
+
+- `id`
+- `case_id`
+- `task_type` (`STRUCTURE`, `CLASSIFY`, `SUMMARISE`, `DRAFT`, `ASSESS_EXTERNAL`, `REDACT_SUGGESTION`)
+- `provider`
+- `model`
+- `model_version_if_available`
+- `prompt_template_id`
+- `prompt_version`
+- `parameters_json`
+- `input_artifact_refs`
+- `input_snapshot_hash`
+- `output_schema_version`
+- `output_hash`
+- `started_at`
+- `completed_at`
+- `status`
+- `cost_units`
+- `retention_policy_applied`
+
+De volledige prompt hoeft niet in gewone operationele logging te staan. Een beveiligde prompttemplate plus versie, inputreferenties en hashes maken de run reproduceerbaar zonder fiscale inhoud in logs te kopiëren.
+
+#### ProvenanceRecord
+
+Geeft elk inhoudelijk domeinobject een uniform herkomstlabel:
+
+- `id`
+- `case_id`
+- `entity_type`
+- `entity_id`
+- `entity_version`
+- `origin_type` (`CUSTOMER`, `EXPERT`, `PLATFORM_AI`, `EXTERNAL_AI`, `SYSTEM_RULE`, `ADMIN`, `IMPORTED_SOURCE`)
+- `producer_user_id` indien menselijk;
+- `ai_execution_id` indien door platform-AI gemaakt;
+- `external_provider_label` indien extern aangeleverd;
+- `creation_method` (`CREATED`, `EXTRACTED`, `DERIVED`, `CORRECTED`, `VERIFIED`, `IMPORTED`)
+- `schema_version`
+- `content_hash`
+- `created_at`
+
+`origin_type` zegt **wie of wat de inhoud produceerde**. Dit is iets anders dan `source_type`, dat zegt **welk bewijs een claim ondersteunt**.
+
+#### ArtifactLineage
+
+- `parent_provenance_id`
+- `child_provenance_id`
+- `relation_type` (`DERIVED_FROM`, `CORRECTS`, `VERIFIES`, `CONTRADICTS`, `CITES`, `SUMMARISES`, `SUPERSEDES`)
+- `created_at`
+
+Hiermee blijft bijvoorbeeld traceerbaar dat een definitieve expertpassage een specifieke AI-claim corrigeert, die claim is afgeleid uit drie bevestigde feiten en wordt ondersteund door twee bronversies.
+
+#### HumanFeedbackAnnotation
+
+De kleinste betekenisvolle eenheid van expertfeedback:
+
+- `id`
+- `case_id`
+- `review_id`
+- `expert_id`
+- `target_entity_type`
+- `target_entity_id`
+- `target_entity_version`
+- `target_claim_id` indien van toepassing;
+- `text_span_start` en `text_span_end` indien passagegericht;
+- `annotation_type` (`CORRECT`, `PARTIALLY_CORRECT`, `INCORRECT`, `UNSUPPORTED`, `MISSING_INFORMATION`, `OUTDATED_SOURCE`, `IRRELEVANT`, `STYLE_ONLY`)
+- `severity`
+- `rationale`
+- `corrected_text`
+- `expert_confidence`
+- `created_at`
+- `supersedes_annotation_id`
+- `adjudication_status` (`UNREVIEWED`, `AGREED`, `DISPUTED`, `ADJUDICATED`, `REJECTED`)
+
+Een correctie zonder rationale kan bruikbaar zijn voor de klant, maar is niet automatisch geschikt als kwaliteitslabel. `STYLE_ONLY` wordt strikt gescheiden van fiscaal-inhoudelijke fouten zodat een model niet leert dat twee equivalente formuleringen inhoudelijk tegenstrijdig zijn.
+
+#### FeedbackSourceLink
+
+- `annotation_id`
+- `source_id`
+- `source_version_or_date`
+- `support_type` (`SUPPORTS_CORRECTION`, `REFUTES_ORIGINAL`, `CONTEXT_ONLY`)
+- `pinpoint_reference`
+- `verified_by_expert`
+
+#### FeedbackAdjudication
+
+- `id`
+- `annotation_id`
+- `adjudicator_expert_id`
+- `decision`
+- `rationale`
+- `decided_at`
+
+Adjudicatie is nodig bij conflicterende expertlabels, complexe of risicovolle onderwerpen en voorbeelden die in een gouden evaluatieset terechtkomen. De auteur van een annotatie mag deze niet zelf adjudiceren.
+
+#### DataUsePermission
+
+- `id`
+- `case_id`
+- `subject_type` (`CUSTOMER_CONTENT`, `EXPERT_FEEDBACK`, `DOCUMENT`, `EXTERNAL_AI_CONTENT`)
+- `subject_id`
+- `purpose` (`SERVICE_DELIVERY`, `QUALITY_ANALYSIS`, `EVALUATION`, `MODEL_TRAINING`)
+- `status` (`ALLOWED`, `DENIED`, `WITHDRAWN`, `NOT_APPLICABLE`, `PENDING_LEGAL_REVIEW`)
+- `legal_basis_reference`
+- `terms_version`
+- `granted_by_user_id`
+- `granted_at`
+- `withdrawn_at`
+- `recorded_by`
+
+Toestemming voor dienstverlening impliceert nooit toestemming voor modeltraining. Ook contractuele rechten van de expert en gebruiksrechten op externe AI-output en bronmateriaal worden afzonderlijk beoordeeld.
+
+#### DatasetSnapshot
+
+- `id`
+- `name`
+- `purpose` (`EVALUATION`, `PROMPT_REGRESSION`, `RANKING_EVALUATION`, `FINE_TUNING`)
+- `dataset_version`
+- `selection_policy_version`
+- `schema_version`
+- `created_by`
+- `approved_by`
+- `created_at`
+- `manifest_hash`
+- `storage_location`
+- `status` (`DRAFT`, `VALIDATING`, `APPROVED`, `RETIRED`, `REVOKED`)
+
+#### DatasetItem
+
+- `dataset_snapshot_id`
+- `source_entity_refs`
+- `source_version_refs`
+- `input_payload`
+- `expected_output`
+- `label_set`
+- `split` (`TRAIN`, `VALIDATION`, `TEST`, `GOLDEN`)
+- `inclusion_reason`
+- `deidentification_run_id`
+- `quality_status`
+- `content_hash`
+- `revoked_at`
+
+Een datasetitem is een afgeleid, opnieuw geanonimiseerd exportobject en geen directe kopie van een operationeel dossier. Dezelfde casus mag niet over train-, validatie- en testsets lekken; splitsing gebeurt daarom op `case_id` of een nog grovere klantgroep.
 
 ### Marketplace, betaling en review
 
@@ -523,18 +710,37 @@ De adviseur is leverancier van de adviesdienst. Het platform kan de factuur name
 - `case_id`
 - `expert_id`
 - `overall_status`
-- `final_answer`
+- `current_final_answer_revision_id`
 - `customer_explanation`
 - `submitted_at`
+
+#### FinalAnswerRevision
+
+- `id`
+- `review_id`
+- `revision_number`
+- `answer_text`
+- `created_by_expert_id`
+- `based_on_ai_answer_id`
+- `content_hash`
+- `created_at`
+- `submitted_at`
+- `supersedes_revision_id`
+
+Ook het menselijke eindantwoord is versioned en immutable. Een correctie na levering maakt een nieuwe revisie met reden en audit event; het reeds geleverde antwoord wordt niet stilzwijgend aangepast.
 
 #### ExpertReviewItem
 
 - `review_id`
 - `claim_id`
+- `claim_version`
 - `assessment`
 - `explanation`
 - `correction`
 - `source_verified`
+- `feedback_annotation_id`
+
+`ExpertReviewItem` bestuurt de operationele reviewworkflow. De gekoppelde `HumanFeedbackAnnotation` bevat het duurzame, fijnmazige kwaliteitslabel voor analyse en eventueel later hergebruik. Zo blijft de leveringsflow eenvoudig zonder trainingslogica in reviewrecords te mengen.
 
 ### Ondersteunende data
 
@@ -577,9 +783,13 @@ erDiagram
     CASE ||--|| CASE_SUMMARY : summarizes
     CASE ||--|| ANONYMIZED_CASE : publishes
     CASE ||--o{ EXTERNAL_AI_ANSWER : receives
+    CASE ||--o{ AI_EXECUTION : processes
+    AI_EXECUTION ||--o{ AI_ANSWER : produces
     CASE ||--o{ AI_ANSWER : generates
     AI_ANSWER ||--o{ AI_CLAIM : contains
     AI_CLAIM }o--o{ SOURCE : supported_by
+    CASE ||--o{ PROVENANCE_RECORD : traces
+    PROVENANCE_RECORD ||--o{ ARTIFACT_LINEAGE : parent_or_child
     CASE ||--o{ EXPERT_OFFER : receives
     EXPERT_PROFILE ||--o{ EXPERT_OFFER : submits
     CASE ||--o| CASE_ASSIGNMENT : assigned_through
@@ -588,6 +798,12 @@ erDiagram
     CASE ||--o{ INVOICE : invoiced_through
     CASE ||--o{ EXPERT_REVIEW : reviewed_in
     EXPERT_REVIEW ||--o{ EXPERT_REVIEW_ITEM : contains
+    EXPERT_REVIEW ||--o{ FINAL_ANSWER_REVISION : versions
+    EXPERT_REVIEW_ITEM ||--o| HUMAN_FEEDBACK_ANNOTATION : materializes
+    HUMAN_FEEDBACK_ANNOTATION }o--o{ SOURCE : justified_by
+    HUMAN_FEEDBACK_ANNOTATION ||--o{ FEEDBACK_ADJUDICATION : adjudicated_in
+    CASE ||--o{ DATA_USE_PERMISSION : governs
+    DATASET_SNAPSHOT ||--o{ DATASET_ITEM : freezes
     CASE ||--o{ CASE_DOCUMENT : attaches
     CASE ||--o{ CASE_STATUS_HISTORY : records
     USER ||--o{ AUDIT_LOG : acts
@@ -769,6 +985,124 @@ Per conclusie worden vastgelegd:
 
 Demo-bronnen krijgen `demo_only = true` en worden zichtbaar als niet juridisch gecontroleerd gemarkeerd.
 
+### 13.1 Feedback-, provenance- en leerlaag
+
+#### Vier begrippen die nooit door elkaar mogen lopen
+
+| Begrip | Betekenis | Voorbeeld |
+|---|---|---|
+| Origin | Wie of wat produceerde de inhoud? | `PLATFORM_AI`, `EXPERT`, `CUSTOMER` |
+| Evidence source | Waarop rust de inhoudelijke conclusie? | wetsartikel, besluit, arrest, handboek |
+| Feedback label | Wat vindt een expert van een specifieke output? | `INCORRECT`, `OUTDATED_SOURCE` |
+| Lineage | Uit welke versie is dit artefact afgeleid? | expertcorrectie corrigeert AI-claim versie 3 |
+
+Iedere inhoudelijke component draagt deze vier dimensies waar relevant. Alleen een vrij tekstveld “opmerking adviseur” is onvoldoende: daarmee zijn fouten later niet betrouwbaar te tellen, reproduceren of gebruiken voor evaluatie.
+
+#### Canonieke classificatie van content
+
+| Contentklasse | Producent | Mag definitief advies worden? | Standaard trainingsgeschikt? |
+|---|---|---:|---:|
+| Ruwe klantinput | Klant | Nee | Nee |
+| Extern AI-antwoord | Externe AI, aangeleverd door klant | Nee | Nee |
+| Platform-AI-output | Platform-AI-run | Nee | Nee |
+| Deterministische afleiding | Regelengine | Nee | Nee |
+| Geïmporteerde bronmetadata | Bronnenpipeline of beheerder | Nee | Nee |
+| Expertfeedback | Geverifieerde adviseur | Nee, is beoordeling | Nee |
+| Definitief expertantwoord | Geverifieerde adviseur | Ja, na workflow-gates | Nee, tenzij afzonderlijk toegestaan en goedgekeurd |
+| Geadjudiceerd kwaliteitslabel | Onafhankelijke beoordelaar | Niet klantgericht | Kandidaat voor evaluatie of training |
+
+“Standaard trainingsgeschikt: nee” is bewust. Geschiktheid ontstaat pas na doelbinding, rechtencontrole, tweede anonimisering, kwaliteitsselectie en expliciete datasetgoedkeuring.
+
+#### Review op atomair niveau
+
+De reviewinterface toont een antwoord in genummerde claims of secties. Een expert kan per eenheid:
+
+- een classificatielabel kiezen;
+- de ernst en het eigen zekerheidsniveau aangeven;
+- een inhoudelijke reden vastleggen;
+- gecorrigeerde tekst schrijven;
+- één of meer actuele bronnen koppelen met pinpointreferentie;
+- aangeven welk ontbrekend feit het oordeel kan veranderen;
+- markeren dat een wijziging uitsluitend stijl of leesbaarheid betreft.
+
+Het systeem bewaart daarbij altijd:
+
+1. de exacte AI-output vóór menselijke wijziging;
+2. de model-, prompt- en inputsnapshot die deze output maakte;
+3. de exacte doelclaim of tekstspan waarop feedback is gegeven;
+4. het expertlabel, de correctie en onderbouwing;
+5. de resulterende definitieve antwoordversie;
+6. eventuele latere correctie, betwisting of adjudicatie.
+
+#### Leerdata-pipeline
+
+```mermaid
+flowchart LR
+    O[Operationele casusdata] --> F[Toestemming, rechten en doelbinding]
+    F -->|niet toegestaan| X[Uitsluiten]
+    F -->|toegestaan| D[Tweede de-identificatie]
+    D --> Q[Schema-, bron- en kwaliteitsvalidatie]
+    Q --> A{Adjudicatie nodig?}
+    A -->|ja| J[Onafhankelijke expert beoordeelt]
+    A -->|nee| S[Selectiebeleid toepassen]
+    J --> S
+    S --> E[Immutable dataset snapshot]
+    E --> G[Golden/testset]
+    E --> T[Train/validatieset]
+    G --> R[Model- en promptregressietests]
+    T --> M[Afzonderlijke trainingsomgeving]
+    M --> R
+    R -->|goedgekeurd| P[Modelversie kandidaat voor release]
+```
+
+De standaardvolgorde is **eerst evalueren, pas later eventueel trainen**. In de eerste productfasen wordt expertfeedback gebruikt voor foutanalyse, prompts, regels en regressietests. Fine-tuning wordt pas overwogen wanneer er voldoende kwalitatief consistente, juridisch bruikbare en geadjudiceerde data is.
+
+#### Datasetregels
+
+- operationele PostgreSQL-tabellen zijn nooit rechtstreeks de trainingsbron;
+- exports draaien als expliciete, geautoriseerde jobs buiten de gebruikersrequest;
+- elke export gebruikt een versioned selection policy en een versioned schema;
+- persoonsgegevens, vrije documenttekst en klantidentificatoren worden opnieuw gecontroleerd;
+- externe AI-antwoorden en auteursrechtelijk bronmateriaal worden standaard uitgesloten;
+- train-, validatie-, test- en golden sets zijn op casus- of klantgroep gescheiden;
+- een golden set wordt niet gebruikt om een model te trainen;
+- een datasetmanifest bevat aantallen per categorie, label, bronsoort en kwaliteitsstatus;
+- iedere rij is terug te leiden naar toegestane bronversies zonder deze informatie aan modelgebruikers te tonen;
+- intrekking of verwijdering markeert afgeleide items als revoked en activeert een impactanalyse op datasets en modellen;
+- een datasetversie wordt nooit stilzwijgend aangepast; correcties maken een nieuwe snapshot;
+- productiepromotie vereist een vergelijking met de vaste golden set en vooraf bepaalde kwaliteitsdrempels.
+
+#### Kwaliteitsmetingen
+
+De leerlaag rapporteert minimaal:
+
+- percentage AI-claims correct, gedeeltelijk correct en onjuist;
+- unsupported-claim rate en outdated-source rate;
+- ontbrekende-feiten-rate per fiscale categorie;
+- expert agreement en aantal geadjudiceerde conflicten;
+- correctiegrootte, apart voor inhoud en stijl;
+- prestaties per model, promptversie, specialisatie en complexiteitsklasse;
+- broncoverage en aandeel claims met geverifieerde primaire bron;
+- privacyfilter-fouten en geblokkeerde datasetitems;
+- verschil tussen offline evaluatie en uitkomsten in echte reviews.
+
+Deze metrics worden geaggregeerd. Operationele dashboards tonen geen volledige fiscale inhoud of persoonsgegevens.
+
+#### Governance en rollen
+
+- een adviseur kan alleen annoteren binnen een aan hem toegewezen, betaalde casus;
+- alleen geverifieerde senior experts of aangewezen kwaliteitsbeheerders mogen adjudiceren;
+- datasetbouwers zien standaard gedeïdentificeerde data en geen klantidentiteit;
+- goedkeuring van een dataset vereist een andere actor dan de maker;
+- modelrelease en datasetgoedkeuring zijn afzonderlijke bevoegdheden;
+- toegang tot learning exports, snapshots en manifesten wordt apart geaudit;
+- hergebruik voor een nieuw doel vereist een nieuwe toestemming/rechtenbeoordeling;
+- experts en klanten krijgen in voorwaarden transparantie over eventueel hergebruik en intrekking.
+
+#### Technische scheiding
+
+De operationele FastAPI-app schrijft provenance, annotaties en permissions naar PostgreSQL. Een latere Python learning pipeline leest uitsluitend goedgekeurde records via een beperkte service-identiteit en schrijft gedeïdentificeerde snapshots naar een afzonderlijke private opslaglocatie. De productieapp heeft geen schrijfrechten op goedgekeurde datasets en de trainingsomgeving heeft geen algemene toegang tot ruwe klantdossiers.
+
 ## 14. API-ontwerp
 
 Basis: `/api/v1` met JSON REST-resources en OpenAPI-documentatie.
@@ -813,10 +1147,29 @@ POST   /cases/{case_id}/mock-payment   # alleen test/demo
 ```text
 GET    /cases/{case_id}/review
 PUT    /cases/{case_id}/review/items/{item_id}
+POST   /cases/{case_id}/review/annotations
+PUT    /review/annotations/{annotation_id}
 POST   /cases/{case_id}/information-requests
 POST   /cases/{case_id}/final-answer
 POST   /cases/{case_id}/deliver
 ```
+
+### Feedback en learning governance
+
+```text
+GET    /cases/{case_id}/provenance
+GET    /review/annotations/{annotation_id}/lineage
+POST   /review/annotations/{annotation_id}/adjudicate   # senior expert
+GET    /admin/learning/quality-metrics
+POST   /admin/datasets/candidates                       # selectiepreview
+POST   /admin/datasets                                  # maakt draft snapshot
+POST   /admin/datasets/{dataset_id}/validate
+POST   /admin/datasets/{dataset_id}/approve             # vier-ogenprincipe
+POST   /admin/datasets/{dataset_id}/revoke
+GET    /admin/datasets/{dataset_id}/manifest
+```
+
+Datasetendpoints leveren nooit ruwe klantdossiers. Exportjobs zijn asynchroon, gebruiken een beperkte service-identiteit en registreren selectiebeleid, toestemming, de-identificatie en contenthashes.
 
 ### Beheer
 
@@ -847,11 +1200,15 @@ frontend/
 │   │   ├── jobboard/
 │   │   └── reviews/
 │   ├── admin/
+│   │   ├── quality/
+│   │   └── datasets/
 │   └── api-client/
 ├── components/
 │   ├── case/
 │   ├── status/
 │   ├── evidence/
+│   ├── feedback/
+│   ├── provenance/
 │   └── forms/
 ├── lib/
 │   ├── api/
@@ -910,6 +1267,9 @@ backend/app/
 │   ├── cases/
 │   ├── anonymisation/
 │   ├── analysis/
+│   ├── provenance/
+│   ├── feedback/
+│   ├── datasets/
 │   ├── marketplace/
 │   ├── payments/
 │   ├── reviews/
@@ -927,6 +1287,21 @@ backend/app/
 ├── services/
 └── tests/
 ```
+
+Wanneer de gecontroleerde learning loop wordt geactiveerd, komt daarnaast een apart Python-package of een afzonderlijke private repository:
+
+```text
+learning/
+├── policies/          # versioned selectie- en uitsluitregels
+├── deidentification/  # tweede privacycontrole
+├── datasets/          # manifests en schemas, geen data in Git
+├── evaluations/       # golden-set regressies en metrics
+├── training/          # optioneel en pas in fase 4
+├── registry/          # dataset-, prompt- en modelmetadata
+└── tests/
+```
+
+De code mag in dezelfde repository starten, maar operationele secrets, ruwe exports en datasetbestanden blijven strikt buiten Git en buiten de frontenddeployment.
 
 Businessregels leven in domeinservices, niet in routehandlers. Routehandlers doen authenticatie, validatie, command-aanroep en response mapping.
 
@@ -956,6 +1331,19 @@ Businessregels leven in domeinservices, niet in routehandlers. Routehandlers doe
 - verwerkersovereenkomsten met providers;
 - privacyverklaring en gebruiksvoorwaarden;
 - beoordeling van beroepsaansprakelijkheid en platformrol.
+
+### Aanvullende eisen voor feedback- en trainingsgebruik
+
+- leg per gebruiksdoel vast welke toestemming, overeenkomst of andere grondslag van toepassing is;
+- voer vóór structureel hergebruik een privacy- en rechtenbeoordeling uit;
+- behandel expertcorrecties als mogelijk intellectueel werk en regel hergebruik contractueel;
+- neem klantdocumenten, externe AI-output en volledige bronteksten niet standaard over in datasets;
+- voer een tweede PII- en geheimhoudingscontrole uit, onafhankelijk van de jobboardanonimisering;
+- pseudonieme IDs en hashes mogen geen eenvoudige terugkoppeling naar een gebruiker mogelijk maken buiten de afgeschermde lineage-service;
+- scheid bewaartermijnen voor operationele dossiers, annotaties, auditlogs en afgeleide datasets;
+- documenteer hoe verwijdering of intrekking doorwerkt naar exports, actieve datasets en reeds getrainde modellen;
+- verstuur geen trainingsdata naar een modelprovider zonder afzonderlijke provider-, regio- en retentiecontrole;
+- log datasettoegang als metadata, nooit als volledige inhoudelijke payload.
 
 ### Verboden in de publieke demo
 
@@ -1060,6 +1448,10 @@ AUTH_CLIENT_SECRET
 AI_PROVIDER
 AI_MODEL
 AI_API_KEY
+LEARNING_EXPORTS_ENABLED
+DATASET_STORAGE_BUCKET
+DATASET_KMS_KEY_ID
+DATASET_MIN_AGREEMENT_SCORE
 PAYMENT_PROVIDER
 PAYMENT_API_KEY
 PAYMENT_WEBHOOK_SECRET
@@ -1072,6 +1464,7 @@ SENTRY_DSN
 ```
 
 Demo- en productieconfiguratie mogen niet dezelfde credentials of databases gebruiken.
+`LEARNING_EXPORTS_ENABLED` staat standaard uit en kan niet via de publieke frontend worden gewijzigd. Het inschakelen van modeltraining is een afzonderlijke releasebeslissing en niet slechts een configuratiewijziging.
 
 ## 21. Teststrategie
 
@@ -1083,6 +1476,11 @@ Demo- en productieconfiguratie mogen niet dezelfde credentials of databases gebr
 - prijsregels;
 - bronzekerheid;
 - reviewvereisten;
+- herkomstclassificatie en verplichte provenancevelden;
+- immutable AI-output en versiegebonden annotaties;
+- onderscheid tussen inhoudelijke correctie en `STYLE_ONLY`;
+- dataset eligibility op basis van doel en permission;
+- train/validatie/test-splitsing zonder casus- of klantlekkage;
 - idempotency.
 
 ### Integratietests
@@ -1092,6 +1490,10 @@ Demo- en productieconfiguratie mogen niet dezelfde credentials of databases gebr
 - payment webhook;
 - documentautorisatie;
 - auditlog na commands;
+- AI-run → claim → expertannotatie → definitief antwoord lineage;
+- intrekking waardoor afgeleide datasetitems worden gemarkeerd;
+- vier-ogen-goedkeuring van dataset snapshots;
+- geblokkeerde export van ruwe documenten en externe AI-output;
 - adapters met testimplementaties.
 
 ### End-to-end
@@ -1103,9 +1505,22 @@ Demo- en productieconfiguratie mogen niet dezelfde credentials of databases gebr
 5. adviseur filtert en claimt;
 6. klant betaalt;
 7. adviseur controleert claims en bronnen;
-8. ontbrekende informatie wordt opgevraagd;
-9. adviseur levert;
-10. klant ziet antwoord en volledige historie.
+8. inhoudelijke labels, correcties en bronverwijzingen worden afzonderlijk opgeslagen;
+9. ontbrekende informatie wordt opgevraagd;
+10. adviseur levert;
+11. klant ziet antwoord en volledige historie;
+12. beheer ziet lineage, maar een casus zonder learning-permission verschijnt niet als datasetkandidaat.
+
+### Evaluatie- en datasettests
+
+- exact dezelfde selectiepolicy levert bij dezelfde input hetzelfde manifest op;
+- elk datasetitem heeft geldige bronversies, provenance en contenthash;
+- een golden item kan niet tegelijk in `TRAIN` voorkomen;
+- conflicterende expertlabels worden niet automatisch als waarheid geëxporteerd;
+- ingetrokken items verdwijnen uit nieuwe snapshots en geven impactwaarschuwingen voor bestaande snapshots;
+- de-identificatie wordt getest met synthetische PII en fiscale documentpatronen;
+- model- en promptkandidaten moeten vooraf vastgelegde kwaliteitsdrempels halen zonder kritieke categorieën te verslechteren;
+- metrics worden uitgesplitst per fiscale specialisatie en complexiteit om gemiddelde scores niet misleidend te maken.
 
 ### Niet-functioneel
 
@@ -1165,6 +1580,8 @@ Op termijn:
 - echte statuscommands;
 - regelgebaseerde anonimisering;
 - mock AI/payment/storage adapters;
+- immutable AI-runs, claimversies en basis-provenance;
+- gestructureerde expertannotaties naast het definitieve antwoord;
 - API- en E2E-tests.
 
 ### Fase 2 — Besloten pilot
@@ -1175,17 +1592,31 @@ Op termijn:
 - expertverificatie;
 - echte payment sandbox;
 - stagingomgeving;
+- quality dashboards op geaggregeerde expertfeedback;
+- data-use permissions en tweede de-identificatie als dry run;
+- versioned evaluatieset met uitsluitend synthetische of expliciet toegestane pilotdata;
 - privacy- en juridische review.
 
 ### Fase 3 — Productie
 
 - live betalingen;
 - gecontroleerde AI-provider;
+- prompt- en modelregressietests tegen een goedgekeurde golden set;
 - operationele monitoring;
 - incident- en herstelprocedures;
 - retentie en verwijdering;
 - schaalbare notificaties;
 - uitbreiding fiscale disciplines.
+
+### Fase 4 — Gecontroleerde learning loop
+
+- alleen starten nadat volume, labelconsistentie, rechten en de-identificatie aantoonbaar voldoende zijn;
+- onafhankelijke datasetgoedkeuring en periodieke herbeoordeling;
+- afzonderlijke Python learning pipeline en private datasetopslag;
+- fine-tuning alleen wanneer deze aantoonbaar beter presteert dan prompt-, bron- of regelverbeteringen;
+- model registry met dataset-, code-, prompt- en evaluatieversies;
+- gefaseerde release met rollback naar de vorige modelversie;
+- continue controle op kwaliteitsverschillen tussen fiscale categorieën en klanttypen.
 
 ## 24. Architectuurbeslissingen
 
@@ -1207,6 +1638,13 @@ Op termijn:
 - Mollie Connect for Platforms; adviseur blijft payment owner;
 - OpenAI EU-project alleen na passende dataretentieafspraken, anders mock-AI;
 - adapters voor externe providers;
+- AI-output is immutable en elke run bewaart model-, prompt-, schema- en inputversies;
+- klantinput, externe AI, platform-AI, systeemregels, bronnen en expertfeedback hebben afzonderlijke origin-classificaties;
+- expertfeedback wordt atomair opgeslagen per claim of passage en blijft gescheiden van het definitieve antwoord;
+- operationele feedback wordt nooit automatisch trainingsdata;
+- evaluatie en promptverbetering gaan vóór eventuele fine-tuning;
+- datasets zijn gedeïdentificeerde, immutable snapshots met manifest, hashes en vier-ogen-goedkeuring;
+- golden/testdata wordt niet als trainingsdata gebruikt en datasplitsing gebeurt minimaal op casusniveau;
 - regelgebaseerde matching;
 - append-only status- en auditgeschiedenis;
 - GitHub Pages uitsluitend voor fictieve frontenddemo;
@@ -1225,6 +1663,11 @@ Op termijn:
 8. Welke adviseurs mogen meedoen en hoe wordt hun vakbekwaamheid geverifieerd?
 9. Welke retentietermijnen gelden voor casussen, documenten, betalingen en auditlogs?
 10. Welke beschikbaarheidsdoelstelling rechtvaardigt later redundante hosting?
+11. Onder welke juridische grondslag en voorwaarden mogen klantinhoud en expertcorrecties per gebruiksdoel worden hergebruikt?
+12. Krijgen experts een opt-out, vergoeding of andere afspraak voor hergebruik van hun inhoudelijke correcties?
+13. Welke minimale expert agreement en adjudicatiescore maken een label geschikt voor de golden set of training?
+14. Wie mag dataset snapshots en nieuwe modelversies onafhankelijk goedkeuren?
+15. Welke verwijderstrategie geldt voor datasets en modellen nadat toestemming of rechten worden ingetrokken?
 
 ## 25. Definitie van productiegeschikt
 
@@ -1237,10 +1680,14 @@ Het platform is pas geschikt voor echte casussen als minimaal is voldaan aan:
 - betaling en webhooks zijn idempotent;
 - alle statusovergangen zijn gevalideerd en gelogd;
 - AI-output is traceerbaar en menselijk gecontroleerd;
+- AI-, klant-, bron- en expertcontent zijn ondubbelzinnig geclassificeerd en geversioneerd;
+- expertcorrecties verwijzen naar de exacte beoordeelde claim- of passageversie;
 - bronnen zijn actueel en verifieerbaar;
 - privacy-, contract- en aansprakelijkheidsdocumenten zijn beoordeeld;
 - monitoring, backups en incidentherstel zijn ingericht;
 - kritieke klant-, expert- en beheerflows hebben end-to-end-tests.
+
+Voordat operationele data voor evaluatie of training wordt gebruikt, gelden aanvullend: vastgelegde gebruiksrechten per doel, tweede de-identificatie, datasetmanifest, onafhankelijke goedkeuring, splitsingscontrole, intrekkingsprocedure en reproduceerbare kwaliteitsevaluatie. Zonder deze extra gates blijft feedback uitsluitend operationele kwaliteitsinformatie.
 
 Tot dat moment blijft de GitHub Pages-versie een publieke demonstratie met uitsluitend fictieve data.
 
