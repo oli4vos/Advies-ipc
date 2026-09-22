@@ -108,6 +108,8 @@ class PaymentRead(BaseModel):
     amount_cents: int
     status: str
     provider: str
+    payment_type: str
+    information_request_id: str | None
     created_at: datetime
     paid_at: datetime | None
 
@@ -174,6 +176,44 @@ class ClaimCreate(BaseModel):
         return value.strip()
 
 
+class InformationRequestRead(BaseModel):
+    id: str
+    expert_id: str
+    expert_name: str
+    status: str
+    question: str
+    rationale: str
+    required_for_assessment: bool
+    evaluation_origin: str
+    evaluation_confidence: int
+    proposed_fee_delta_cents: int
+    approved_fee_delta_cents: int
+    customer_answer: str
+    created_at: datetime
+    evaluated_at: datetime | None
+    answered_at: datetime | None
+    accepted_at: datetime | None
+
+
+class InformationRequestCreate(BaseModel):
+    question: str = Field(min_length=10, max_length=2_000)
+    estimated_extra_minutes: int = Field(default=15, ge=5, le=120)
+
+    @field_validator("question")
+    @classmethod
+    def strip_question(cls, value: str) -> str:
+        return value.strip()
+
+
+class InformationAnswerCreate(BaseModel):
+    answer: str = Field(min_length=10, max_length=10_000)
+
+    @field_validator("answer")
+    @classmethod
+    def strip_answer(cls, value: str) -> str:
+        return value.strip()
+
+
 class CaseRead(BaseModel):
     id: str
     public_code: str
@@ -207,6 +247,7 @@ class CaseRead(BaseModel):
     claims: list[ClaimRead]
     payment: PaymentRead | None
     reviews: list[ExpertReviewRead]
+    information_requests: list[InformationRequestRead]
 
 
 class CaseListItem(BaseModel):

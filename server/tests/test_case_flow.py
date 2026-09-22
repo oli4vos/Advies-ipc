@@ -139,3 +139,56 @@ def test_claim_selection_payment_and_expert_review_flow(client) -> None:
         "MOCK_PAYMENT_PAID",
         "EXPERT_REVIEW_SUBMITTED",
     }
+
+
+def test_fee_only_increases_for_platform_approved_required_information(client) -> None:
+    created = client.post("/api/v1/cases", json=PAYLOAD).json()
+    case_id = created["id"]
+    client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    client.post(f"/api/v1/admin/cases/{case_id}/publish")
+    claim = client.post(f"/api/v1/cases/{case_id}/claims", json={}).json()
+    client.post(f"/api/v1/cases/{case_id}/claims/{claim['id']}/select")
+    paid = client.post(f"/api/v1/cases/{case_id}/pay").json()
+    base_fee = paid["offered_fee_cents"]
+
+    request = client.post(
+        f"/api/v1/cases/{case_id}/information-requests",
+        json={
+            "question": "Kun je de loonstroken van beide werkgevers aanleveren?",
+            "estimated_extra_minutes": 20,
+        },
+    )
+    assert request.status_code == 201, request.text
+    info = request.json()
+    assert info["required_for_assessment"] is True
+    assert info["evaluation_origin"] == "RULE_ENGINE"
+    assert info["approved_fee_delta_cents"] == 3000
+
+    waiting = client.get(f"/api/v1/cases/{case_id}").json()
+    assert waiting["status"] == "NEEDS_INFORMATION"
+    assert waiting["offered_fee_cents"] == base_fee
+
+    answered = client.post(
+        f"/api/v1/cases/{case_id}/information-requests/{info['id']}/answer",
+        json={"answer": "Ik lever beide loonstroken van 2025 aan."},
+    )
+    assert answered.status_code == 200, answered.text
+    accepted = client.post(
+        f"/api/v1/cases/{case_id}/information-requests/{info['id']}/accept-fee"
+    )
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["status"] == "AWAITING_INFORMATION_PAYMENT"
+    assert accepted.json()["payment"]["amount_cents"] == 3000
+
+    paid_extra = client.post(f"/api/v1/cases/{case_id}/pay")
+    assert paid_extra.status_code == 200, paid_extra.text
+    assert paid_extra.json()["status"] == "IN_REVIEW"
+    assert paid_extra.json()["payment"]["payment_type"] == "INFORMATION_REQUEST"
+
+    not_required = client.post(
+        f"/api/v1/cases/{case_id}/information-requests",
+        json={"question": "Kun je ook wat algemene achtergrond geven?"},
+    )
+    assert not_required.status_code == 201, not_required.text
+    assert not_required.json()["required_for_assessment"] is False
+    assert not_required.json()["approved_fee_delta_cents"] == 0

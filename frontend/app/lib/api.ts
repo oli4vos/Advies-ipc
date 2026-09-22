@@ -50,6 +50,8 @@ export type ApiPayment = {
   amount_cents: number;
   status: string;
   provider: string;
+  payment_type: string;
+  information_request_id: string | null;
   created_at: string;
   paid_at: string | null;
 };
@@ -73,6 +75,25 @@ export type ApiReview = {
   created_at: string;
   submitted_at: string;
   items: ApiReviewItem[];
+};
+
+export type ApiInformationRequest = {
+  id: string;
+  expert_id: string;
+  expert_name: string;
+  status: string;
+  question: string;
+  rationale: string;
+  required_for_assessment: boolean;
+  evaluation_origin: string;
+  evaluation_confidence: number;
+  proposed_fee_delta_cents: number;
+  approved_fee_delta_cents: number;
+  customer_answer: string;
+  created_at: string;
+  evaluated_at: string | null;
+  answered_at: string | null;
+  accepted_at: string | null;
 };
 
 export type ApiCase = {
@@ -103,6 +124,7 @@ export type ApiCase = {
   claims: ApiClaim[];
   payment: ApiPayment | null;
   reviews: ApiReview[];
+  information_requests: ApiInformationRequest[];
 };
 
 export type CaseInput = {
@@ -187,6 +209,35 @@ export async function selectClaim(caseId: string, claimId: string) {
 
 export async function payCase(caseId: string) {
   return request<ApiCase>(`/cases/${caseId}/pay`, { method: "POST" });
+}
+
+export async function requestInformation(
+  caseId: string,
+  question: string,
+  estimated_extra_minutes = 15,
+) {
+  return request<ApiInformationRequest>(`/cases/${caseId}/information-requests`, {
+    method: "POST",
+    body: JSON.stringify({ question, estimated_extra_minutes }),
+  });
+}
+
+export async function answerInformation(
+  caseId: string,
+  requestId: string,
+  answer: string,
+) {
+  return request<ApiCase>(
+    `/cases/${caseId}/information-requests/${requestId}/answer`,
+    { method: "POST", body: JSON.stringify({ answer }) },
+  );
+}
+
+export async function acceptInformationFee(caseId: string, requestId: string) {
+  return request<ApiCase>(
+    `/cases/${caseId}/information-requests/${requestId}/accept-fee`,
+    { method: "POST" },
+  );
 }
 
 export type ReviewInput = {

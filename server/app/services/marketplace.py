@@ -5,7 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
-from ..schemas import ClaimCreate, ExpertReviewCreate
+from ..schemas import (
+    ClaimCreate,
+    ExpertReviewCreate,
+    InformationAnswerCreate,
+    InformationRequestCreate,
+)
 from .cases import _add_provenance, get_case_or_404
 
 
@@ -36,6 +41,212 @@ def get_expert(session: Session, expert_id: str | None) -> models.User:
     if expert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Adviseur niet gevonden")
     return expert
+
+
+def evaluate_information_need(
+    *, question: str, estimated_extra_minutes: int
+) -> tuple[bool, int, int, str]:
+    """Lean, explainable gate; replaceable by an AI evaluator later.
+
+    The AI may suggest a classification in a future adapter, but it may not
+    directly change the fee. The platform keeps a conservative keyword rule
+    and a hard fee cap for this MVP.
+    """
+    text = question.lower()
+    required_terms = (
+        "loonstrook",
+        "werkgever",
+        "rittenregistratie",
+        "contract",
+        "factuur",
+        "klantlocatie",
+        "hypotheek",
+        "eigendom",
+        "datum",
+        "bewijs",
+        "document",
+    )
+    matched = [term for term in required_terms if term in text]
+    required = bool(matched)
+    confidence = min(95, 70 + len(matched) * 8) if required else 82
+    if not required:
+        return False, confidence, 0, (
+            "Deze vraag lijkt nuttig voor context, maar is volgens de MVP-regels "
+            "niet noodzakelijk om de casus te beoordelen."
+        )
+    proposed_delta = min(5000, max(1500, ((estimated_extra_minutes + 14) // 15) * 1500))
+    return (
+        True,
+        confidence,
+        proposed_delta,
+        "De gevraagde informatie raakt een noodzakelijk feit: " + ", ".join(matched) + ".",
+    )
+
+
+def request_information(
+    session: Session,
+    case: models.Case,
+    payload: InformationRequestCreate,
+) -> models.InformationRequest:
+    if case.status not in {"PAID", "IN_REVIEW"}:
+        raise HTTPException(status_code=409, detail="Aanvullende vragen kunnen nu niet worden gesteld")
+    selected = session.scalar(
+        select(models.ExpertClaim).where(
+            models.ExpertClaim.case_id == case.id,
+            models.ExpertClaim.status == "SELECTED",
+        )
+    )
+    if selected is None:
+        raise HTTPException(status_code=409, detail="Er is nog geen adviseur gekozen")
+    required, confidence, fee_delta, rationale = evaluate_information_need(
+        question=payload.question,
+        estimated_extra_minutes=payload.estimated_extra_minutes,
+    )
+    info_request = models.InformationRequest(
+        case_id=case.id,
+        expert_id=selected.expert_id,
+        status="PENDING_CUSTOMER" if required else "DECLINED",
+        question=payload.question,
+        rationale=rationale,
+        required_for_assessment=required,
+        evaluation_origin="RULE_ENGINE",
+        evaluation_confidence=confidence,
+        proposed_fee_delta_cents=fee_delta,
+        approved_fee_delta_cents=fee_delta,
+        evaluated_at=now(),
+    )
+    session.add(info_request)
+    session.flush()
+    if required:
+        previous = case.status
+        case.status = "NEEDS_INFORMATION"
+        case.version += 1
+        session.add(
+            models.CaseStatusHistory(
+                case_id=case.id,
+                from_status=previous,
+                to_status=case.status,
+                actor_type="SYSTEM",
+                reason="Aanvullende informatie is noodzakelijk verklaard; klant moet eerst antwoorden.",
+            )
+        )
+    session.add(
+        models.AuditLog(
+            actor_type="SYSTEM",
+            action="INFORMATION_REQUEST_EVALUATED",
+            object_type="InformationRequest",
+            object_id=info_request.id,
+            metadata_json={
+                "case_id": case.id,
+                "required_for_assessment": required,
+                "evaluation_origin": "RULE_ENGINE",
+                "confidence": confidence,
+                "fee_delta_cents": fee_delta,
+            },
+        )
+    )
+    _add_provenance(
+        session,
+        case=case,
+        entity_type="InformationRequest",
+        entity_id=info_request.id,
+        origin_type="SYSTEM_RULE",
+        creation_method="EVALUATED",
+        schema_version="information-request.v1",
+        value={"question": payload.question, "required": required, "fee_delta_cents": fee_delta},
+    )
+    session.expire(case, ["information_requests", "history", "provenance"])
+    session.commit()
+    return get_case_or_404(session, case.id).information_requests[-1]
+
+
+def answer_information(
+    session: Session,
+    case: models.Case,
+    request_id: str,
+    payload: InformationAnswerCreate,
+) -> models.Case:
+    if case.status != "NEEDS_INFORMATION":
+        raise HTTPException(status_code=409, detail="Deze casus wacht niet op aanvullende informatie")
+    info_request = session.scalar(
+        select(models.InformationRequest).where(
+            models.InformationRequest.id == request_id,
+            models.InformationRequest.case_id == case.id,
+        )
+    )
+    if info_request is None or info_request.status != "PENDING_CUSTOMER":
+        raise HTTPException(status_code=409, detail="Deze informatievraag kan niet worden beantwoord")
+    info_request.customer_answer = payload.answer
+    info_request.answered_at = now()
+    info_request.status = "ANSWERED"
+    case.version += 1
+    session.add(
+        models.AuditLog(
+            actor_type="CUSTOMER",
+            actor_id=case.customer_id,
+            action="INFORMATION_ANSWERED",
+            object_type="InformationRequest",
+            object_id=info_request.id,
+            metadata_json={"case_id": case.id},
+        )
+    )
+    _add_provenance(
+        session,
+        case=case,
+        entity_type="InformationAnswer",
+        entity_id=info_request.id,
+        origin_type="CUSTOMER",
+        creation_method="CREATED",
+        schema_version="information-answer.v1",
+        value=payload.answer,
+        producer_user_id=case.customer_id,
+    )
+    session.expire(case, ["information_requests", "provenance"])
+    session.commit()
+    return get_case_or_404(session, case.id)
+
+
+def accept_information_fee(
+    session: Session, case: models.Case, request_id: str
+) -> models.Case:
+    info_request = session.scalar(
+        select(models.InformationRequest).where(
+            models.InformationRequest.id == request_id,
+            models.InformationRequest.case_id == case.id,
+        )
+    )
+    if case.status != "NEEDS_INFORMATION" or info_request is None:
+        raise HTTPException(status_code=409, detail="Deze informatievraag kan niet worden geaccepteerd")
+    if info_request.status != "ANSWERED" or not info_request.required_for_assessment:
+        raise HTTPException(status_code=409, detail="De klant moet eerst antwoorden op een noodzakelijke vraag")
+    info_request.status = "AWAITING_PAYMENT"
+    info_request.accepted_at = now()
+    payment = models.Payment(
+        case_id=case.id,
+        customer_id=case.customer_id,
+        amount_cents=info_request.approved_fee_delta_cents,
+        status="PENDING",
+        provider="mock",
+        payment_type="INFORMATION_REQUEST",
+        information_request_id=info_request.id,
+    )
+    session.add(payment)
+    case.status = "AWAITING_INFORMATION_PAYMENT"
+    case.version += 1
+    session.add(
+        models.AuditLog(
+            actor_type="CUSTOMER",
+            actor_id=case.customer_id,
+            action="INFORMATION_FEE_ACCEPTED",
+            object_type="InformationRequest",
+            object_id=info_request.id,
+            metadata_json={"case_id": case.id, "amount_cents": payment.amount_cents},
+        )
+    )
+    session.flush()
+    session.expire(case, ["information_requests", "payments"])
+    session.commit()
+    return get_case_or_404(session, case.id)
 
 
 def claim_case(
@@ -164,7 +375,7 @@ def select_claim(session: Session, case: models.Case, claim_id: str) -> models.C
 
 
 def pay_case(session: Session, case: models.Case) -> models.Case:
-    if case.status != "AWAITING_PAYMENT":
+    if case.status not in {"AWAITING_PAYMENT", "AWAITING_INFORMATION_PAYMENT"}:
         raise HTTPException(status_code=409, detail="Voor deze casus staat geen betaling klaar")
     payment = session.scalar(
         select(models.Payment).where(
@@ -176,7 +387,10 @@ def pay_case(session: Session, case: models.Case) -> models.Case:
     payment.status = "PAID"
     payment.paid_at = now()
     previous = case.status
-    case.status = "PAID"
+    information_payment = payment.payment_type == "INFORMATION_REQUEST"
+    case.status = "IN_REVIEW" if information_payment else "PAID"
+    if information_payment and payment.information_request is not None:
+        payment.information_request.status = "PAYMENT_RECEIVED"
     case.version += 1
     session.add(
         models.CaseStatusHistory(
@@ -185,7 +399,11 @@ def pay_case(session: Session, case: models.Case) -> models.Case:
             to_status=case.status,
             actor_type="CUSTOMER",
             actor_id=case.customer_id,
-            reason="Mockbetaling ontvangen; adviseur kan de review starten.",
+            reason=(
+                "Mockbetaling voor noodzakelijke aanvullende beoordeling ontvangen."
+                if information_payment
+                else "Mockbetaling ontvangen; adviseur kan de review starten."
+            ),
         )
     )
     session.add(
@@ -195,10 +413,14 @@ def pay_case(session: Session, case: models.Case) -> models.Case:
             action="MOCK_PAYMENT_PAID",
             object_type="Payment",
             object_id=payment.id,
-            metadata_json={"case_id": case.id, "amount_cents": payment.amount_cents},
+            metadata_json={
+                "case_id": case.id,
+                "amount_cents": payment.amount_cents,
+                "payment_type": payment.payment_type,
+            },
         )
     )
-    session.expire(case, ["payments"])
+    session.expire(case, ["payments", "information_requests"])
     session.commit()
     return get_case_or_404(session, case.id)
 

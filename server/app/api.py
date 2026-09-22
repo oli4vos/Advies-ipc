@@ -14,6 +14,9 @@ from .schemas import (
     ClaimRead,
     ExpertRead,
     ExpertReviewCreate,
+    InformationAnswerCreate,
+    InformationRequestCreate,
+    InformationRequestRead,
 )
 from .services.cases import (
     case_to_list_item,
@@ -24,6 +27,7 @@ from .services.cases import (
     list_cases,
     publish_case,
     claim_to_read,
+    information_request_to_read,
 )
 from .services.marketplace import (
     claim_case,
@@ -31,6 +35,9 @@ from .services.marketplace import (
     pay_case,
     select_claim,
     submit_review,
+    accept_information_fee,
+    answer_information,
+    request_information,
 )
 
 
@@ -141,6 +148,46 @@ def submit_case_review(
 ) -> CaseRead:
     return case_to_read(
         submit_review(session, get_case_or_404(session, case_id), payload),
+        include_original=True,
+    )
+
+
+@router.post(
+    "/cases/{case_id}/information-requests",
+    response_model=InformationRequestRead,
+    status_code=201,
+)
+def create_information_request(
+    case_id: str,
+    payload: InformationRequestCreate,
+    session: Session = Depends(get_session),
+) -> InformationRequestRead:
+    request = request_information(session, get_case_or_404(session, case_id), payload)
+    return information_request_to_read(request)
+
+
+@router.post("/cases/{case_id}/information-requests/{request_id}/answer", response_model=CaseRead)
+def answer_information_request(
+    case_id: str,
+    request_id: str,
+    payload: InformationAnswerCreate,
+    session: Session = Depends(get_session),
+) -> CaseRead:
+    return case_to_read(
+        answer_information(session, get_case_or_404(session, case_id), request_id, payload),
+        include_original=True,
+    )
+
+
+@router.post(
+    "/cases/{case_id}/information-requests/{request_id}/accept-fee",
+    response_model=CaseRead,
+)
+def accept_information_request_fee(
+    case_id: str, request_id: str, session: Session = Depends(get_session)
+) -> CaseRead:
+    return case_to_read(
+        accept_information_fee(session, get_case_or_404(session, case_id), request_id),
         include_original=True,
     )
 

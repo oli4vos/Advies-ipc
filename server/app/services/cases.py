@@ -14,6 +14,7 @@ from ..schemas import (
     CaseRead,
     ClaimRead,
     ExpertReviewRead,
+    InformationRequestRead,
     PaymentRead,
 )
 from .analysis import analyse
@@ -36,6 +37,7 @@ CASE_LOAD_OPTIONS = (
     selectinload(models.Case.history),
     selectinload(models.Case.claims).selectinload(models.ExpertClaim.expert),
     selectinload(models.Case.payments),
+    selectinload(models.Case.information_requests).selectinload(models.InformationRequest.expert),
     selectinload(models.Case.reviews).selectinload(models.ExpertReview.expert),
     selectinload(models.Case.reviews).selectinload(models.ExpertReview.items),
 )
@@ -431,6 +433,29 @@ def review_to_read(review: models.ExpertReview) -> ExpertReviewRead:
     )
 
 
+def information_request_to_read(
+    request: models.InformationRequest,
+) -> InformationRequestRead:
+    return InformationRequestRead(
+        id=request.id,
+        expert_id=request.expert_id,
+        expert_name=request.expert.display_name,
+        status=request.status,
+        question=request.question,
+        rationale=request.rationale,
+        required_for_assessment=request.required_for_assessment,
+        evaluation_origin=request.evaluation_origin,
+        evaluation_confidence=request.evaluation_confidence,
+        proposed_fee_delta_cents=request.proposed_fee_delta_cents,
+        approved_fee_delta_cents=request.approved_fee_delta_cents,
+        customer_answer=request.customer_answer,
+        created_at=request.created_at,
+        evaluated_at=request.evaluated_at,
+        answered_at=request.answered_at,
+        accepted_at=request.accepted_at,
+    )
+
+
 def case_to_read(case: models.Case, *, include_original: bool) -> CaseRead:
     answer = case.ai_answers[-1] if case.ai_answers else None
     sources = []
@@ -476,6 +501,9 @@ def case_to_read(case: models.Case, *, include_original: bool) -> CaseRead:
         claims=[claim_to_read(claim) for claim in case.claims],
         payment=PaymentRead.model_validate(case.payments[-1]) if case.payments else None,
         reviews=[review_to_read(review) for review in case.reviews],
+        information_requests=[
+            information_request_to_read(request) for request in case.information_requests
+        ],
     )
 
 

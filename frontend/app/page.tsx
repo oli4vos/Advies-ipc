@@ -3,13 +3,17 @@ import "./ux-extra.css";
 import { useEffect, useMemo, useState } from "react";
 import {
   ApiCase,
+  acceptInformationFee,
+  answerInformation,
   claimCase,
   confirmCaseStructure,
   createCase,
+  getCase,
   hasLocalApi,
   listCaseDetails,
   payCase,
   publishCase,
+  requestInformation,
   ReviewInput,
   selectClaim,
   submitReview,
@@ -20,6 +24,8 @@ type Status =
   | "PUBLISHED"
   | "CLAIMED"
   | "AWAITING_PAYMENT"
+  | "AWAITING_INFORMATION_PAYMENT"
+  | "NEEDS_INFORMATION"
   | "PAID"
   | "IN_REVIEW"
   | "ANSWER_SUBMITTED"
@@ -51,6 +57,7 @@ type CaseItem = {
   claims?: ApiCase["claims"];
   paymentStatus?: string;
   finalAnswer?: string;
+  informationRequests?: ApiCase["information_requests"];
 };
 type PitchScenario = "conservative" | "base" | "growth";
 
@@ -361,6 +368,7 @@ function apiCaseToItem(item: ApiCase): CaseItem {
     claims: item.claims,
     paymentStatus: item.payment?.status,
     finalAnswer: item.reviews.at(-1)?.final_answer,
+    informationRequests: item.information_requests,
     history: item.history
       .slice()
       .reverse()
@@ -564,6 +572,23 @@ export default function Home() {
         );
       }
     };
+  const refreshBackendCase = async (id: string, action: (backendId: string) => Promise<unknown>) => {
+    const current = cases.find((item) => item.id === id);
+    if (!current?.backendId) return;
+    try {
+      await action(current.backendId);
+      const mapped = apiCaseToItem(await getCase(current.backendId));
+      setCases((items) => items.map((item) => (item.id === id ? mapped : item)));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "De aanvullende informatie kon niet worden opgeslagen.");
+    }
+  };
+  const askInformation = (id: string, question: string) =>
+    refreshBackendCase(id, (backendId) => requestInformation(backendId, question));
+  const answerInfo = (id: string, requestId: string, answer: string) =>
+    refreshBackendCase(id, (backendId) => answerInformation(backendId, requestId, answer));
+  const acceptFee = (id: string, requestId: string) =>
+    refreshBackendCase(id, (backendId) => acceptInformationFee(backendId, requestId));
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (hasLocalApi()) {
@@ -752,6 +777,9 @@ export default function Home() {
             pay(selected.id)
           }
           choose={choose}
+          askInformation={askInformation}
+          answerInformation={answerInfo}
+          acceptInformationFee={acceptFee}
           review={() => setView("review")}
         />
       )}{" "}
@@ -1639,6 +1667,9 @@ function CaseDetail({
   accept,
   pay,
   choose,
+  askInformation,
+  answerInformation,
+  acceptInformationFee,
   review,
 }: {
   item: CaseItem;
@@ -1647,9 +1678,14 @@ function CaseDetail({
   accept: () => void;
   pay: () => void;
   choose: (id: string, claimId: string) => void;
+  askInformation: (id: string, question: string) => void;
+  answerInformation: (id: string, requestId: string, answer: string) => void;
+  acceptInformationFee: (id: string, requestId: string) => void;
   review: () => void;
 }) {
   const customer = role === "customer";
+  const [answer, setAnswer] = useState("");
+  const [question, setQuestion] = useState("");
   return (
     <section className="page">
       <div className="detail-head">
@@ -1734,6 +1770,82 @@ function CaseDetail({
               actuele wet- en regelgeving en ontbrekende feiten controleren.
             </p>
           </section>
+          {role === "advisor" &&
+            (item.status === "PAID" || item.status === "IN_REVIEW") && (
+              <section className="section-block">
+                <div className="block-title">
+                  <span>04</span>
+                  <h2>Ontbrekend feit signaleren</h2>
+                  <small>fee alleen na platformbeoordeling</small>
+                </div>
+                <p className="muted">
+                  Stel alleen een vraag die noodzakelijk is voor een verantwoord oordeel.
+                  De regelengine beoordeelt eerst of een toeslag gerechtvaardigd is.
+                </p>
+                <textarea
+                  rows={3}
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder="Bijvoorbeeld: kunt u de loonstroken van beide werkgevers aanleveren?"
+                />
+                <button
+                  className="button secondary full"
+                  disabled={question.trim().length < 10}
+                  onClick={() => {
+                    askInformation(item.id, question);
+                    setQuestion("");
+                  }}
+                >
+                  Vraag laten beoordelen
+                </button>
+              </section>
+            )}
+          {customer && item.informationRequests?.at(-1) && (
+            <section className="section-block">
+              <div className="block-title">
+                <span>04</span>
+                <h2>Aanvullende informatie</h2>
+                <small>alleen noodzakelijk indien gemarkeerd</small>
+              </div>
+              <div className="ai-box">
+                <b>{item.informationRequests.at(-1)?.question}</b>
+                <p>{item.informationRequests.at(-1)?.rationale}</p>
+                {item.informationRequests.at(-1)?.required_for_assessment && (
+                  <small>
+                    Platformbeslissing · {item.informationRequests.at(-1)?.evaluation_confidence}% confidence · toeslag €{((item.informationRequests.at(-1)?.approved_fee_delta_cents || 0) / 100).toFixed(2)}
+                  </small>
+                )}
+              </div>
+              {item.informationRequests.at(-1)?.status === "PENDING_CUSTOMER" && (
+                <>
+                  <textarea
+                    rows={4}
+                    value={answer}
+                    onChange={(event) => setAnswer(event.target.value)}
+                    placeholder="Geef alleen de informatie die voor deze vraag nodig is."
+                  />
+                  <button
+                    className="button primary full"
+                    disabled={answer.trim().length < 10}
+                    onClick={() => {
+                      answerInformation(item.id, item.informationRequests!.at(-1)!.id, answer);
+                      setAnswer("");
+                    }}
+                  >
+                    Informatie versturen
+                  </button>
+                </>
+              )}
+              {item.informationRequests.at(-1)?.status === "ANSWERED" && (
+                <button
+                  className="button primary full"
+                  onClick={() => acceptInformationFee(item.id, item.informationRequests!.at(-1)!.id)}
+                >
+                  Akkoord met noodzakelijke toeslag
+                </button>
+              )}
+            </section>
+          )}
         </div>
         <aside className="detail-aside">
           <div className="summary-panel">
@@ -1758,7 +1870,9 @@ function CaseDetail({
                 Accepteer opdracht <Icon n="arrow" />
               </button>
             )}
-            {customer && item.status === "AWAITING_PAYMENT" && (
+            {customer &&
+              (item.status === "AWAITING_PAYMENT" ||
+                item.status === "AWAITING_INFORMATION_PAYMENT") && (
               <button className="button primary full" onClick={pay}>
                 Mockbetaling uitvoeren <Icon n="lock" />
               </button>

@@ -91,6 +91,9 @@ class Case(Base):
     payments: Mapped[list[Payment]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="Payment.created_at"
     )
+    information_requests: Mapped[list[InformationRequest]] = relationship(
+        back_populates="case", cascade="all, delete-orphan", order_by="InformationRequest.created_at"
+    )
     reviews: Mapped[list[ExpertReview]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="ExpertReview.created_at"
     )
@@ -122,11 +125,41 @@ class Payment(Base):
     amount_cents: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(24), default="PENDING")
     provider: Mapped[str] = mapped_column(String(40), default="mock")
+    payment_type: Mapped[str] = mapped_column(String(40), default="BASE_CASE")
+    information_request_id: Mapped[str | None] = mapped_column(
+        ForeignKey("information_requests.id"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     case: Mapped[Case] = relationship(back_populates="payments")
     customer: Mapped[User] = relationship()
+    information_request: Mapped[InformationRequest | None] = relationship()
+
+
+class InformationRequest(Base):
+    __tablename__ = "information_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    review_id: Mapped[str | None] = mapped_column(ForeignKey("expert_reviews.id"), index=True)
+    expert_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(String(40), default="PENDING_PLATFORM_REVIEW")
+    question: Mapped[str] = mapped_column(Text)
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    required_for_assessment: Mapped[bool] = mapped_column(Boolean, default=False)
+    evaluation_origin: Mapped[str] = mapped_column(String(40), default="RULE_ENGINE")
+    evaluation_confidence: Mapped[int] = mapped_column(Integer, default=0)
+    proposed_fee_delta_cents: Mapped[int] = mapped_column(Integer, default=0)
+    approved_fee_delta_cents: Mapped[int] = mapped_column(Integer, default=0)
+    customer_answer: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    case: Mapped[Case] = relationship(back_populates="information_requests")
+    expert: Mapped[User] = relationship()
 
 
 class RawCaseInput(Base):
