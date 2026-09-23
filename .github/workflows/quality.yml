@@ -16,7 +16,6 @@ jobs:
       run:
         working-directory: server
     env:
-      FISCALE_DATABASE_URL: sqlite:///${{ runner.temp }}/fiscale-lijn-ci.db
       FISCALE_APP_ENV: test
     steps:
       - uses: actions/checkout@v4
@@ -26,8 +25,12 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -e '.[dev]'
       - name: Verify migrations on an empty database
+        env:
+          FISCALE_DATABASE_URL: sqlite:///${{ github.workspace }}/.fiscale-lijn-ci.db
         run: alembic upgrade head
       - name: Detect model and migration drift
+        env:
+          FISCALE_DATABASE_URL: sqlite:///${{ github.workspace }}/.fiscale-lijn-ci.db
         run: alembic check
       - name: Run API tests
         run: pytest
