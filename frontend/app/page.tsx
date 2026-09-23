@@ -1,6 +1,6 @@
 "use client";
 import "./ux-extra.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ApiCase,
   acceptInformationFee,
@@ -54,6 +54,7 @@ type CaseItem = {
   customerQuestion: string;
   aiAnswer: string;
   externalAi?: string;
+  attachments?: UploadedAttachment[];
   source: string;
   sourceType: string;
   history: { label: string; date: string }[];
@@ -72,6 +73,12 @@ type IntakeForm = {
   year: string;
   clientType: string;
   externalAi: string;
+};
+type UploadedAttachment = {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
 };
 type PitchScenario = "conservative" | "base" | "growth";
 
@@ -891,12 +898,12 @@ export default function Home() {
     refreshBackendCase(id, (backendId) =>
       decideInformationRequest(backendId, requestId, approve, feeDeltaCents),
     );
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent, attachments: UploadedAttachment[] = []) => {
     e.preventDefault();
     if (hasLocalApi()) {
       try {
-        const saved = apiCaseToItem(
-          await createCase({
+        const saved = {
+          ...apiCaseToItem(await createCase({
             title: form.title,
             description: form.description,
             question: form.question,
@@ -905,8 +912,9 @@ export default function Home() {
             client_type: form.clientType,
             urgency: "Normaal",
             external_ai_answer: form.externalAi,
-          }),
-        );
+          })),
+          attachments,
+        };
         setCases((items) => [
           saved,
           ...items.filter((item) => item.id !== saved.id),
@@ -961,6 +969,7 @@ export default function Home() {
       aiAnswer:
         "Er is nog geen fiscaal conceptantwoord opgesteld. Eerst moet de structuur door de klant worden bevestigd en door een adviseur worden beoordeeld.",
       externalAi: form.externalAi || undefined,
+      attachments,
       originalDescription: form.description,
       anonymizedDescription: demoAnonymise(form.description),
       source: "Nog te bepalen",
@@ -1987,6 +1996,12 @@ function StructuredCase({
   );
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function Intake({
   form,
   setForm,
@@ -1995,10 +2010,28 @@ function Intake({
 }: {
   form: IntakeForm;
   setForm: (v: IntakeForm) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent, attachments: UploadedAttachment[]) => void;
   onCancel: () => void;
 }) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [fileError, setFileError] = useState("");
   const set = (k: keyof IntakeForm, v: string) => setForm({ ...form, [k]: v });
+  const addFiles = (files: FileList | File[]) => {
+    const nextFiles = Array.from(files);
+    const allowed = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/png", "image/jpeg"];
+    const rejected = nextFiles.find((file) => !allowed.includes(file.type) || file.size > 10 * 1024 * 1024);
+    if (rejected) {
+      setFileError("Gebruik pdf, Word, png of jpg-bestanden van maximaal 10 MB per bestand.");
+      return;
+    }
+    setFileError("");
+    setAttachments((current) => [
+      ...current,
+      ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, size: file.size, type: file.type })),
+    ].filter((file, index, all) => all.findIndex((candidate) => candidate.id === file.id) === index).slice(0, 5));
+  };
   const fillExample = () =>
     setForm({
       ...form,
@@ -2028,7 +2061,7 @@ function Intake({
           Annuleren
         </button>
       </div>
-      <form className="form" onSubmit={onSubmit}>
+      <form className="form" onSubmit={(event) => onSubmit(event, attachments)}>
         <div className="example-callout">
           <div>
             <strong>Even zien hoe dit werkt?</strong>
@@ -2126,6 +2159,32 @@ function Intake({
             <Icon n="file" /> Wij nemen dit antwoord niet automatisch over.
           </small>
         </label>
+        <div className="upload-block">
+          <div className="field-heading">
+            <span>Documenten toevoegen <small>optioneel</small></span>
+            <small>maximaal 5 bestanden</small>
+          </div>
+          <div
+            className={`dropzone${isDragging ? " is-dragging" : ""}`}
+            onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={(event) => { event.preventDefault(); setIsDragging(false); }}
+            onDrop={(event) => { event.preventDefault(); setIsDragging(false); addFiles(event.dataTransfer.files); }}
+          >
+            <Icon n="file" />
+            <div>
+              <strong>Sleep bestanden hierheen</strong>
+              <span>of kies een bestand vanaf uw apparaat</span>
+            </div>
+            <button type="button" className="button secondary compact" onClick={() => fileInput.current?.click()}>Bestand kiezen</button>
+            <input ref={fileInput} type="file" className="visually-hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" multiple onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.currentTarget.value = ""; }} />
+          </div>
+          <small className="helper"><Icon n="shield" /> Documenten zijn in deze publieke demo alleen lokaal als bestandsnaam zichtbaar en worden niet naar cloudopslag gestuurd. Deel geen echte persoonsgegevens.</small>
+          {fileError && <span className="upload-error">{fileError}</span>}
+          {attachments.length > 0 && <div className="attachment-list" aria-label="Geselecteerde documenten">
+            {attachments.map((file) => <div className="attachment-row" key={file.id}><Icon n="file" /><span><b>{file.name}</b><small>{formatFileSize(file.size)}</small></span><button type="button" className="text-button" onClick={() => setAttachments((current) => current.filter((item) => item.id !== file.id))}>Verwijder</button></div>)}
+          </div>}
+        </div>
         <div className="privacy-note">
           <Icon n="shield" />
           <div>
