@@ -16,6 +16,7 @@ import {
   requestInformation,
   ReviewInput,
   selectClaim,
+  setDemoRole,
   submitReview,
 } from "./lib/api";
 
@@ -422,6 +423,7 @@ export default function Home() {
     );
   const changeRole = (r: Role) => {
       setRole(r);
+      setDemoRole(r);
       setView(r === "advisor" ? "jobboard" : r === "admin" ? "admin" : "home");
     },
     open = (id: string) => {

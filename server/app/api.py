@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
+from .auth import (
+    Actor,
+    get_current_actor,
+    require_case_customer,
+    require_role,
+    require_selected_expert,
+)
 from .db import get_session
 from .schemas import (
     AnonymisationPreview,
@@ -45,26 +52,50 @@ router = APIRouter()
 
 
 @router.post("/cases", response_model=CaseRead, status_code=201)
-def submit_case(payload: CaseCreate, session: Session = Depends(get_session)) -> CaseRead:
-    case = create_case(session, payload)
+def submit_case(
+    payload: CaseCreate,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    require_role(actor, "CUSTOMER")
+    case = create_case(session, payload, customer=actor.user)
     return case_to_read(case, include_original=True)
 
 
 @router.get("/cases", response_model=list[CaseListItem])
-def customer_cases(session: Session = Depends(get_session)) -> list[CaseListItem]:
-    return [case_to_list_item(case) for case in list_cases(session)]
+def customer_cases(
+    session: Session = Depends(get_session), actor: Actor = Depends(get_current_actor)
+) -> list[CaseListItem]:
+    require_role(actor, "CUSTOMER", "ADMIN")
+    customer_id = actor.user.id if actor.role == "CUSTOMER" else None
+    return [case_to_list_item(case) for case in list_cases(session, customer_id=customer_id)]
 
 
 @router.get("/cases/{case_id}", response_model=CaseRead)
-def case_detail(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
-    return case_to_read(get_case_or_404(session, case_id), include_original=True)
+def case_detail(
+    case_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    if actor.role == "ADMIN":
+        return case_to_read(case, include_original=True)
+    if actor.role == "CUSTOMER":
+        require_case_customer(actor, case)
+        return case_to_read(case, include_original=True)
+    require_selected_expert(session, actor, case)
+    return case_to_read(case, include_original=False)
 
 
 @router.get("/cases/{case_id}/anonymisation-preview", response_model=AnonymisationPreview)
 def anonymisation_preview(
-    case_id: str, session: Session = Depends(get_session)
+    case_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> AnonymisationPreview:
     case = get_case_or_404(session, case_id)
+    if actor.role != "ADMIN":
+        require_case_customer(actor, case)
     return AnonymisationPreview(
         case_id=case.id,
         original_text=case.raw_inputs[-1].raw_text,
@@ -75,19 +106,33 @@ def anonymisation_preview(
 
 
 @router.post("/cases/{case_id}/confirm-structure", response_model=CaseRead)
-def confirm_case_structure(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
-    case = confirm_structure(session, get_case_or_404(session, case_id))
+def confirm_case_structure(
+    case_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    require_case_customer(actor, case)
+    case = confirm_structure(session, case)
     return case_to_read(case, include_original=True)
 
 
 @router.post("/admin/cases/{case_id}/publish", response_model=CaseRead)
-def admin_publish_case(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
+def admin_publish_case(
+    case_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    require_role(actor, "ADMIN")
     case = publish_case(session, get_case_or_404(session, case_id))
     return case_to_read(case, include_original=True)
 
 
 @router.get("/jobboard", response_model=list[CaseListItem])
-def jobboard(session: Session = Depends(get_session)) -> list[CaseListItem]:
+def jobboard(
+    session: Session = Depends(get_session), actor: Actor = Depends(get_current_actor)
+) -> list[CaseListItem]:
+    require_role(actor, "ADVISOR")
     return [
         case_to_list_item(case)
         for case in list_cases(session, status_filter=["PUBLISHED", "CLAIMED"])
@@ -95,17 +140,23 @@ def jobboard(session: Session = Depends(get_session)) -> list[CaseListItem]:
 
 
 @router.get("/jobboard/{case_id}", response_model=CaseRead)
-def jobboard_case(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
+def jobboard_case(
+    case_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    require_role(actor, "ADVISOR")
     case = get_case_or_404(session, case_id)
     if case.status not in {"PUBLISHED", "CLAIMED"}:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="Gepubliceerde casus niet gevonden")
     return case_to_read(case, include_original=False)
 
 
 @router.get("/advisors", response_model=list[ExpertRead])
-def advisors(session: Session = Depends(get_session)) -> list[ExpertRead]:
+def advisors(
+    session: Session = Depends(get_session), actor: Actor = Depends(get_current_actor)
+) -> list[ExpertRead]:
+    require_role(actor, "ADVISOR", "ADMIN")
     expert = ensure_demo_expert(session)
     return [
         ExpertRead(
@@ -121,34 +172,54 @@ def advisors(session: Session = Depends(get_session)) -> list[ExpertRead]:
 
 @router.post("/cases/{case_id}/claims", response_model=ClaimRead, status_code=201)
 def create_case_claim(
-    case_id: str, payload: ClaimCreate, session: Session = Depends(get_session)
+    case_id: str,
+    payload: ClaimCreate,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> ClaimRead:
-    claim = claim_case(session, get_case_or_404(session, case_id), payload)
+    require_role(actor, "ADVISOR")
+    claim = claim_case(session, get_case_or_404(session, case_id), payload, expert=actor.user)
     return claim_to_read(claim)
 
 
 @router.post("/cases/{case_id}/claims/{claim_id}/select", response_model=CaseRead)
 def choose_case_claim(
-    case_id: str, claim_id: str, session: Session = Depends(get_session)
+    case_id: str,
+    claim_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    require_case_customer(actor, case)
     return case_to_read(
-        select_claim(session, get_case_or_404(session, case_id), claim_id),
+        select_claim(session, case, claim_id),
         include_original=True,
     )
 
 
 @router.post("/cases/{case_id}/pay", response_model=CaseRead)
-def pay_for_case(case_id: str, session: Session = Depends(get_session)) -> CaseRead:
-    return case_to_read(pay_case(session, get_case_or_404(session, case_id)), include_original=True)
+def pay_for_case(
+    case_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    require_case_customer(actor, case)
+    return case_to_read(pay_case(session, case), include_original=True)
 
 
 @router.post("/cases/{case_id}/review", response_model=CaseRead)
 def submit_case_review(
-    case_id: str, payload: ExpertReviewCreate, session: Session = Depends(get_session)
+    case_id: str,
+    payload: ExpertReviewCreate,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    require_selected_expert(session, actor, case)
     return case_to_read(
-        submit_review(session, get_case_or_404(session, case_id), payload),
-        include_original=True,
+        submit_review(session, case, payload, expert=actor.user),
+        include_original=False,
     )
 
 
@@ -161,8 +232,11 @@ def create_information_request(
     case_id: str,
     payload: InformationRequestCreate,
     session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> InformationRequestRead:
-    request = request_information(session, get_case_or_404(session, case_id), payload)
+    case = get_case_or_404(session, case_id)
+    require_selected_expert(session, actor, case)
+    request = request_information(session, case, payload, expert=actor.user)
     return information_request_to_read(request)
 
 
@@ -172,9 +246,12 @@ def answer_information_request(
     request_id: str,
     payload: InformationAnswerCreate,
     session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    require_case_customer(actor, case)
     return case_to_read(
-        answer_information(session, get_case_or_404(session, case_id), request_id, payload),
+        answer_information(session, case, request_id, payload),
         include_original=True,
     )
 
@@ -184,15 +261,23 @@ def answer_information_request(
     response_model=CaseRead,
 )
 def accept_information_request_fee(
-    case_id: str, request_id: str, session: Session = Depends(get_session)
+    case_id: str,
+    request_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
 ) -> CaseRead:
+    case = get_case_or_404(session, case_id)
+    require_case_customer(actor, case)
     return case_to_read(
-        accept_information_fee(session, get_case_or_404(session, case_id), request_id),
+        accept_information_fee(session, case, request_id),
         include_original=True,
     )
 
 
 @router.get("/admin/audit-logs", response_model=list[AuditLogRead])
-def audit_logs(session: Session = Depends(get_session)) -> list[AuditLogRead]:
+def audit_logs(
+    session: Session = Depends(get_session), actor: Actor = Depends(get_current_actor)
+) -> list[AuditLogRead]:
+    require_role(actor, "ADMIN")
     statement = select(models.AuditLog).order_by(models.AuditLog.created_at.desc()).limit(200)
     return list(session.scalars(statement))

@@ -138,6 +138,14 @@ export type CaseInput = {
   external_ai_answer: string;
 };
 
+export type DemoRole = "customer" | "advisor" | "admin";
+
+let currentDemoRole: DemoRole = "customer";
+
+export function setDemoRole(role: DemoRole) {
+  currentDemoRole = role;
+}
+
 function apiBaseUrl() {
   const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
   if (configured) return configured;
@@ -157,7 +165,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer demo-${currentDemoRole}`,
+      ...init?.headers,
+    },
   });
 
   if (!response.ok) {

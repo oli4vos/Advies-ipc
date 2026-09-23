@@ -32,17 +32,6 @@ def ensure_demo_expert(session: Session) -> models.User:
     return expert
 
 
-def get_expert(session: Session, expert_id: str | None) -> models.User:
-    if expert_id is None:
-        return ensure_demo_expert(session)
-    expert = session.scalar(
-        select(models.User).where(models.User.id == expert_id, models.User.role == "ADVISOR")
-    )
-    if expert is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Adviseur niet gevonden")
-    return expert
-
-
 def evaluate_information_need(
     *, question: str, estimated_extra_minutes: int
 ) -> tuple[bool, int, int, str]:
@@ -87,6 +76,8 @@ def request_information(
     session: Session,
     case: models.Case,
     payload: InformationRequestCreate,
+    *,
+    expert: models.User,
 ) -> models.InformationRequest:
     if case.status not in {"PAID", "IN_REVIEW"}:
         raise HTTPException(status_code=409, detail="Aanvullende vragen kunnen nu niet worden gesteld")
@@ -98,13 +89,15 @@ def request_information(
     )
     if selected is None:
         raise HTTPException(status_code=409, detail="Er is nog geen adviseur gekozen")
+    if selected.expert_id != expert.id:
+        raise HTTPException(status_code=403, detail="Alleen de gekozen adviseur kan informatie vragen")
     required, confidence, fee_delta, rationale = evaluate_information_need(
         question=payload.question,
         estimated_extra_minutes=payload.estimated_extra_minutes,
     )
     info_request = models.InformationRequest(
         case_id=case.id,
-        expert_id=selected.expert_id,
+        expert_id=expert.id,
         status="PENDING_CUSTOMER" if required else "DECLINED",
         question=payload.question,
         rationale=rationale,
@@ -250,11 +243,10 @@ def accept_information_fee(
 
 
 def claim_case(
-    session: Session, case: models.Case, payload: ClaimCreate
+    session: Session, case: models.Case, payload: ClaimCreate, *, expert: models.User
 ) -> models.ExpertClaim:
     if case.status not in {"PUBLISHED", "CLAIMED"}:
         raise HTTPException(status_code=409, detail="Deze casus staat niet meer open voor claims")
-    expert = get_expert(session, payload.expert_id)
     existing = session.scalar(
         select(models.ExpertClaim).where(
             models.ExpertClaim.case_id == case.id,
@@ -426,7 +418,7 @@ def pay_case(session: Session, case: models.Case) -> models.Case:
 
 
 def submit_review(
-    session: Session, case: models.Case, payload: ExpertReviewCreate
+    session: Session, case: models.Case, payload: ExpertReviewCreate, *, expert: models.User
 ) -> models.Case:
     if case.status not in {"PAID", "IN_REVIEW"}:
         raise HTTPException(status_code=409, detail="De adviseur kan deze casus nog niet reviewen")
@@ -438,10 +430,12 @@ def submit_review(
     )
     if selected is None:
         raise HTTPException(status_code=409, detail="Er is nog geen adviseur gekozen")
+    if selected.expert_id != expert.id:
+        raise HTTPException(status_code=403, detail="Alleen de gekozen adviseur kan reviewen")
 
     review = models.ExpertReview(
         case_id=case.id,
-        expert_id=selected.expert_id,
+        expert_id=expert.id,
         claim_id=selected.id,
         final_answer=payload.final_answer,
         notes=payload.notes,

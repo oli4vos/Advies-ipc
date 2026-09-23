@@ -20,10 +20,9 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
             yield session
 
     app.dependency_overrides[get_session] = override_session
-    with TestClient(app) as test_client:
+    with TestClient(app, headers={"Authorization": "Bearer demo-customer"}) as test_client:
         test_client.testing_session = testing_session  # type: ignore[attr-defined]
         yield test_client
     app.dependency_overrides.clear()
     Base.metadata.drop_all(engine)
     engine.dispose()
-

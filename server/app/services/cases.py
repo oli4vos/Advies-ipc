@@ -86,27 +86,14 @@ def _add_provenance(
     )
 
 
-def ensure_demo_customer(session: Session) -> models.User:
-    user = session.scalar(select(models.User).where(models.User.email == "klantdemo@example.test"))
-    if user is None:
-        user = models.User(
-            email="klantdemo@example.test",
-            role="CUSTOMER",
-            display_name="Klantdemo",
-            is_demo=True,
-        )
-        session.add(user)
-        session.flush()
-    return user
-
-
-def create_case(session: Session, payload: CaseCreate) -> models.Case:
-    customer = ensure_demo_customer(session)
+def create_case(session: Session, payload: CaseCreate, *, customer: models.User) -> models.Case:
     anonymized_result = anonymise(payload.description)
+    anonymized_title = anonymise(payload.title).text
+    anonymized_question = anonymise(payload.question).text
     analysis = analyse(
         anonymized_text=anonymized_result.text,
-        supplied_title=payload.title,
-        supplied_question=payload.question,
+        supplied_title=anonymized_title,
+        supplied_question=anonymized_question,
         supplied_category=payload.category,
         urgency=payload.urgency,
     )
@@ -142,9 +129,11 @@ def create_case(session: Session, payload: CaseCreate) -> models.Case:
     session.flush()
 
     if payload.external_ai_answer:
+        anonymized_external_answer = anonymise(payload.external_ai_answer).text
         external = models.ExternalAIAnswer(
             case_id=case.id,
             answer_text=payload.external_ai_answer,
+            anonymized_answer_text=anonymized_external_answer,
         )
         session.add(external)
         session.flush()
@@ -489,7 +478,11 @@ def case_to_read(case: models.Case, *, include_original: bool) -> CaseRead:
         anonymized_description=case.anonymized.anonymized_text if case.anonymized else "",
         original_description=case.raw_inputs[-1].raw_text if include_original and case.raw_inputs else None,
         external_ai_answer=(
-            case.external_ai_answers[-1].answer_text if case.external_ai_answers else None
+            case.external_ai_answers[-1].answer_text
+            if include_original and case.external_ai_answers
+            else case.external_ai_answers[-1].anonymized_answer_text
+            if case.external_ai_answers
+            else None
         ),
         ai_answer=answer.answer_text if answer else "",
         facts=case.facts,
@@ -532,11 +525,16 @@ def case_to_list_item(case: models.Case) -> CaseListItem:
 
 
 def list_cases(
-    session: Session, *, status_filter: str | list[str] | None = None
+    session: Session,
+    *,
+    status_filter: str | list[str] | None = None,
+    customer_id: str | None = None,
 ) -> list[models.Case]:
     statement = select(models.Case).options(*CASE_LOAD_OPTIONS).order_by(models.Case.created_at.desc())
     if isinstance(status_filter, list):
         statement = statement.where(models.Case.status.in_(status_filter))
     elif status_filter:
         statement = statement.where(models.Case.status == status_filter)
+    if customer_id:
+        statement = statement.where(models.Case.customer_id == customer_id)
     return list(session.scalars(statement).unique())

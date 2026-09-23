@@ -17,6 +17,9 @@ dev = [
   "pytest>=8,<9",
 ]
 
+[tool.setuptools]
+packages = ["app"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
@@ -24,4 +27,3 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-

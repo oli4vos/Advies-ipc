@@ -42,3 +42,16 @@ pytest
 
 Alle analyse is lokaal en voorspelbaar. Er wordt in deze fase geen externe AI-provider, betaalprovider of documentopslag aangeroepen.
 
+## Demo-aanmelding
+
+De API accepteert in de lokale demo alleen een expliciete Bearer-token. Dit is
+geen productie-authenticatie, maar voorkomt dat een schermrol automatisch
+toegang geeft tot alle casussen. Gebruik uitsluitend lokaal:
+
+- `Bearer demo-customer` voor de klantdemo;
+- `Bearer demo-advisor` voor de adviseurdemo;
+- `Bearer demo-admin` voor beheerderscontrole.
+
+De API weigert deze demo-identiteiten buiten `local`, `test` of `demo`. Een
+productie-identiteitsprovider moet deze adapter vervangen voordat een server
+extern beschikbaar komt.

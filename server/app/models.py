@@ -184,6 +184,7 @@ class ExternalAIAnswer(Base):
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
     provider_label: Mapped[str] = mapped_column(String(120), default="Door klant aangeleverd")
     answer_text: Mapped[str] = mapped_column(Text)
+    anonymized_answer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     assessment_status: Mapped[str] = mapped_column(String(40), default="UNREVIEWED")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
