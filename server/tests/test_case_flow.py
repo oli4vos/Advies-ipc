@@ -50,7 +50,10 @@ def test_full_intake_publish_and_jobboard_flow(client) -> None:
     blocked_publish = client.post(f"/api/v1/admin/cases/{case_id}/publish")
     assert blocked_publish.status_code == 403
 
-    confirmed = client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    confirmed = client.post(
+        f"/api/v1/cases/{case_id}/confirm-structure",
+        json={"anonymisation_confirmed": True},
+    )
     assert confirmed.status_code == 200
     assert all(fact["customer_confirmation"] == "CONFIRMED" for fact in confirmed.json()["facts"])
 
@@ -91,10 +94,29 @@ def test_case_persists_across_database_sessions(client) -> None:
     assert persisted.public_code == created["public_code"]
 
 
+def test_customer_must_confirm_anonymisation_before_structure_confirmation(client) -> None:
+    created = client.post("/api/v1/cases", json=PAYLOAD).json()
+    case_id = created["id"]
+
+    blocked = client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    assert blocked.status_code == 422
+    assert "anonimise" in blocked.json()["detail"]
+
+    confirmed = client.post(
+        f"/api/v1/cases/{case_id}/confirm-structure",
+        json={"anonymisation_confirmed": True},
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["status"] == "PENDING_REVIEW"
+
+
 def test_claim_selection_payment_and_expert_review_flow(client) -> None:
     created = client.post("/api/v1/cases", json=PAYLOAD).json()
     case_id = created["id"]
-    client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    client.post(
+        f"/api/v1/cases/{case_id}/confirm-structure",
+        json={"anonymisation_confirmed": True},
+    )
     client.post(f"/api/v1/admin/cases/{case_id}/publish", headers=ADMIN_HEADERS)
 
     claim = client.post(
@@ -155,7 +177,10 @@ def test_claim_selection_payment_and_expert_review_flow(client) -> None:
 def test_fee_only_increases_for_platform_approved_required_information(client) -> None:
     created = client.post("/api/v1/cases", json=PAYLOAD).json()
     case_id = created["id"]
-    client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    client.post(
+        f"/api/v1/cases/{case_id}/confirm-structure",
+        json={"anonymisation_confirmed": True},
+    )
     client.post(f"/api/v1/admin/cases/{case_id}/publish", headers=ADMIN_HEADERS)
     claim = client.post(f"/api/v1/cases/{case_id}/claims", json={}, headers=ADVISOR_HEADERS).json()
     client.post(f"/api/v1/cases/{case_id}/claims/{claim['id']}/select")

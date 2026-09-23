@@ -207,9 +207,10 @@ export async function listJobboardDetails() {
   return Promise.all(cases.map((item) => getJobboardCase(item.id)));
 }
 
-export async function confirmCaseStructure(caseId: string) {
+export async function confirmCaseStructure(caseId: string, anonymisation_confirmed = true) {
   return request<ApiCase>(`/cases/${caseId}/confirm-structure`, {
     method: "POST",
+    body: JSON.stringify({ anonymisation_confirmed }),
   });
 }
 

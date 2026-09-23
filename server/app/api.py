@@ -17,6 +17,7 @@ from .schemas import (
     CaseCreate,
     CaseListItem,
     CaseRead,
+    StructureConfirmation,
     ClaimCreate,
     ClaimRead,
     ExpertRead,
@@ -110,12 +111,13 @@ def anonymisation_preview(
 @router.post("/cases/{case_id}/confirm-structure", response_model=CaseRead)
 def confirm_case_structure(
     case_id: str,
+    payload: StructureConfirmation,
     session: Session = Depends(get_session),
     actor: Actor = Depends(get_current_actor),
 ) -> CaseRead:
     case = get_case_or_404(session, case_id)
     require_case_customer(actor, case)
-    case = confirm_structure(session, case)
+    case = confirm_structure(session, case, payload.anonymisation_confirmed)
     return case_to_read(case, include_original=True)
 
 

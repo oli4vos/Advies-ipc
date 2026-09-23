@@ -60,6 +60,8 @@ type CaseItem = {
   claims?: ApiCase["claims"];
   paymentStatus?: string;
   finalAnswer?: string;
+  originalDescription?: string;
+  anonymizedDescription?: string;
   informationRequests?: ApiCase["information_requests"];
 };
 type PitchScenario = "conservative" | "base" | "growth";
@@ -379,6 +381,8 @@ function apiCaseToItem(item: ApiCase): CaseItem {
     claims: item.claims,
     paymentStatus: item.payment?.status,
     finalAnswer: item.reviews.at(-1)?.final_answer,
+    originalDescription: item.original_description || undefined,
+    anonymizedDescription: item.anonymized_description,
     informationRequests: item.information_requests,
     history: item.history
       .slice()
@@ -391,6 +395,15 @@ function apiCaseToItem(item: ApiCase): CaseItem {
         }).format(new Date(entry.created_at)),
       })),
   };
+}
+
+function demoAnonymise(text: string) {
+  return text
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[E-MAIL]")
+    .replace(/\b(?:06|\+31)[ -]?\d(?:[ -]?\d){8}\b/g, "[TELEFOONNUMMER]")
+    .replace(/\b\d{4}\s?[A-Z]{2}\b/gi, "[POSTCODE]")
+    .replace(/\bBSN\s*[:=]?\s*\d{8,9}\b/gi, "BSN [BSN VERWIJDERD]")
+    .replace(/\bKVK\s*[:=]?\s*\d{8}\b/gi, "KvK [KVK VERWIJDERD]");
 }
 
 export default function Home() {
@@ -455,7 +468,7 @@ export default function Home() {
           const saved =
             status === "PUBLISHED"
               ? await publishCase(current.backendId)
-              : await confirmCaseStructure(current.backendId);
+              : await confirmCaseStructure(current.backendId, true);
           const mapped = apiCaseToItem(saved);
           setCases((items) =>
             items.map((item) => (item.id === id ? mapped : item)),
@@ -680,6 +693,8 @@ export default function Home() {
       aiAnswer:
         "Er is nog geen fiscaal conceptantwoord opgesteld. Eerst moet de structuur door de klant worden bevestigd en door een adviseur worden beoordeeld.",
       externalAi: form.externalAi || undefined,
+      originalDescription: form.description,
+      anonymizedDescription: demoAnonymise(form.description),
       source: "Nog te bepalen",
       sourceType: "Niet geverifieerd",
       history: [{ label: "Casus ingediend", date: "Zojuist" }],
@@ -1412,6 +1427,14 @@ function StructuredCase({
   confirm: () => void;
   edit: () => void;
 }) {
+  const [anonymisationApproved, setAnonymisationApproved] = useState(false);
+  const originalText =
+    item.originalDescription ||
+    "Uw oorspronkelijke vrije tekst blijft alleen zichtbaar in uw klantomgeving.";
+  const anonymizedText =
+    item.anonymizedDescription ||
+    item.summary ||
+    "Er is nog geen geanonimiseerde tekst beschikbaar.";
   return (
     <section className="page narrow">
       <div className="page-head">
@@ -1435,6 +1458,39 @@ function StructuredCase({
           </span>
         </div>
       </div>
+      <section className="anonymisation-review">
+        <div className="block-title">
+          <span>PRIVACYCONTROLE</span>
+          <h2>Controleer de anonimisering</h2>
+          <small>verplicht vóór beoordeling</small>
+        </div>
+        <p>
+          Controleer of de tekst hieronder geen namen, adressen, contactgegevens,
+          bedrijfsnamen of andere herkenbare informatie meer bevat. Ontbreekt er
+          iets of staat er nog een herkenbaar detail in? Kies dan voor aanpassen.
+        </p>
+        <div className="anonymisation-columns">
+          <div>
+            <span className="card-label">ALLEEN VOOR U</span>
+            <p>{originalText}</p>
+          </div>
+          <div className="anonymised-preview">
+            <span className="card-label">NAAR ADVISEURS</span>
+            <p>{anonymizedText}</p>
+          </div>
+        </div>
+        <label className="approval-row">
+          <input
+            type="checkbox"
+            checked={anonymisationApproved}
+            onChange={(event) => setAnonymisationApproved(event.target.checked)}
+          />
+          <span>
+            Ik heb de geanonimiseerde tekst gecontroleerd en ga ermee akkoord dat
+            deze versie aan adviseurs wordt getoond.
+          </span>
+        </label>
+      </section>
       <div className="structure-grid">
         <section className="structure-card">
           <div className="card-label">VOORGESTELDE KERNVRAAG</div>
@@ -1498,7 +1554,11 @@ function StructuredCase({
         <button className="button secondary" onClick={edit}>
           Structuur aanpassen
         </button>
-        <button className="button primary" onClick={confirm}>
+        <button
+          className="button primary"
+          disabled={!anonymisationApproved}
+          onClick={confirm}
+        >
           Klopt, laat beoordelen <Icon n="arrow" />
         </button>
       </div>

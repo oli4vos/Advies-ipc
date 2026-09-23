@@ -20,6 +20,10 @@ class CaseCreate(BaseModel):
         return value.strip()
 
 
+class StructureConfirmation(BaseModel):
+    anonymisation_confirmed: bool = False
+
+
 class FactRead(BaseModel):
     id: str
     label: str

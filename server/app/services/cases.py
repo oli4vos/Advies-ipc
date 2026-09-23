@@ -326,7 +326,14 @@ def create_case(session: Session, payload: CaseCreate, *, customer: models.User)
     return get_case_or_404(session, case.id)
 
 
-def confirm_structure(session: Session, case: models.Case) -> models.Case:
+def confirm_structure(
+    session: Session, case: models.Case, anonymisation_confirmed: bool = False
+) -> models.Case:
+    if not anonymisation_confirmed:
+        raise HTTPException(
+            status_code=422,
+            detail="De klant moet eerst de geanonimiseerde tekst controleren en bevestigen",
+        )
     if case.status != "PENDING_REVIEW":
         raise HTTPException(status_code=409, detail="Alleen een casus in controle kan worden bevestigd")
     if case.summary is None:
@@ -342,7 +349,7 @@ def confirm_structure(session: Session, case: models.Case) -> models.Case:
             to_status="PENDING_REVIEW",
             actor_type="CUSTOMER",
             actor_id=case.customer_id,
-            reason="Klant heeft de gestructureerde feiten bevestigd.",
+            reason="Klant heeft de gestructureerde feiten en anonimisering bevestigd.",
         )
     )
     session.add(
@@ -352,7 +359,7 @@ def confirm_structure(session: Session, case: models.Case) -> models.Case:
             action="CASE_STRUCTURE_CONFIRMED",
             object_type="Case",
             object_id=case.id,
-            metadata_json={"version": case.version},
+            metadata_json={"version": case.version, "anonymisation_confirmed": True},
         )
     )
     session.commit()
