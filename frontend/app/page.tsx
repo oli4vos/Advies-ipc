@@ -653,16 +653,40 @@ export default function Home() {
         "Adviseur gekozen. Het mock-betaalverzoek staat klaar.",
       );
     },
-    pay = async (id: string) =>
-      saveCase(id, payCase, "Mockbetaling ontvangen. De adviseur kan starten."),
+    pay = async (id: string) => {
+      const current = cases.find((item) => item.id === id);
+      if (!current?.backendId) {
+        const hasInformationPayment = current.status === "AWAITING_INFORMATION_PAYMENT";
+        update(
+          id,
+          hasInformationPayment ? "IN_REVIEW" : "PAID",
+          hasInformationPayment
+            ? "Aanvullende mockbetaling ontvangen. De adviseur kan verder reviewen."
+            : "Mockbetaling ontvangen. De adviseur kan starten.",
+        );
+        return;
+      }
+      await saveCase(id, payCase, "Mockbetaling ontvangen. De adviseur kan starten.");
+    },
     reviewSubmit = async (id: string, input: ReviewInput) => {
       const current = cases.find((item) => item.id === id);
       if (!current?.backendId) {
-        update(
-          id,
-          "DELIVERED",
-          "Definitief gecontroleerd antwoord afgeleverd.",
+        setCases((items) =>
+          items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: "DELIVERED",
+                  finalAnswer: input.final_answer,
+                  history: [
+                    { label: "Gecontroleerd antwoord afgeleverd", date: "Zojuist" },
+                    ...item.history,
+                  ],
+                }
+              : item,
+          ),
         );
+        setNotice("Definitief gecontroleerd antwoord afgeleverd.");
         setView("case");
         return;
       }
@@ -695,11 +719,98 @@ export default function Home() {
     }
   };
   const askInformation = (id: string, question: string) =>
-    refreshBackendCase(id, (backendId) => requestInformation(backendId, question));
+    (() => {
+      const current = cases.find((item) => item.id === id);
+      if (!current?.backendId) {
+        const request: ApiCase["information_requests"][number] = {
+          id: `demo-information-${id}`,
+          expert_id: "demo-advisor",
+          expert_name: "Mara van Dijk",
+          status: "PENDING_CUSTOMER",
+          question,
+          rationale: "Deze informatie is volgens de demo-regelengine noodzakelijk om de fiscale conclusie verantwoord te kunnen controleren.",
+          required_for_assessment: true,
+          evaluation_origin: "RULE_ENGINE",
+          evaluation_confidence: 91,
+          proposed_fee_delta_cents: 3000,
+          approved_fee_delta_cents: 3000,
+          platform_decision_note: "Demo: noodzakelijke informatievraag automatisch goedgekeurd.",
+          platform_decided_at: new Date().toISOString(),
+          customer_answer: "",
+          created_at: new Date().toISOString(),
+          evaluated_at: new Date().toISOString(),
+          answered_at: null,
+          accepted_at: null,
+        };
+        setCases((items) =>
+          items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: "NEEDS_INFORMATION",
+                  informationRequests: [...(item.informationRequests || []), request],
+                  history: [
+                    { label: "Aanvullende informatie nodig; toeslag beoordeeld", date: "Zojuist" },
+                    ...item.history,
+                  ],
+                }
+              : item,
+          ),
+        );
+        setNotice("De aanvullende vraag is noodzakelijk verklaard. De klant kan antwoorden.");
+        return;
+      }
+      void refreshBackendCase(id, (backendId) => requestInformation(backendId, question));
+    })();
   const answerInfo = (id: string, requestId: string, answer: string) =>
-    refreshBackendCase(id, (backendId) => answerInformation(backendId, requestId, answer));
+    (() => {
+      const current = cases.find((item) => item.id === id);
+      if (!current?.backendId) {
+        setCases((items) =>
+          items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  informationRequests: item.informationRequests?.map((request) =>
+                    request.id === requestId
+                      ? { ...request, status: "ANSWERED", customer_answer: answer, answered_at: new Date().toISOString() }
+                      : request,
+                  ),
+                  history: [{ label: "Aanvullende informatie ontvangen", date: "Zojuist" }, ...item.history],
+                }
+              : item,
+          ),
+        );
+        setNotice("Informatie ontvangen. De klant kan de noodzakelijke toeslag bevestigen.");
+        return;
+      }
+      void refreshBackendCase(id, (backendId) => answerInformation(backendId, requestId, answer));
+    })();
   const acceptFee = (id: string, requestId: string) =>
-    refreshBackendCase(id, (backendId) => acceptInformationFee(backendId, requestId));
+    (() => {
+      const current = cases.find((item) => item.id === id);
+      if (!current?.backendId) {
+        setCases((items) =>
+          items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: "AWAITING_INFORMATION_PAYMENT",
+                  informationRequests: item.informationRequests?.map((request) =>
+                    request.id === requestId
+                      ? { ...request, status: "ACCEPTED", accepted_at: new Date().toISOString() }
+                      : request,
+                  ),
+                  history: [{ label: "Klant akkoord met noodzakelijke toeslag", date: "Zojuist" }, ...item.history],
+                }
+              : item,
+          ),
+        );
+        setNotice("Toeslag bevestigd. De aanvullende mockbetaling staat klaar.");
+        return;
+      }
+      void refreshBackendCase(id, (backendId) => acceptInformationFee(backendId, requestId));
+    })();
   const decideInfo = (id: string, requestId: string, approve: boolean, feeDeltaCents = 0) =>
     refreshBackendCase(id, (backendId) =>
       decideInformationRequest(backendId, requestId, approve, feeDeltaCents),
@@ -1823,6 +1934,9 @@ function Jobboard({
   setFilter: (v: string) => void;
   open: (id: string) => void;
 }) {
+  const availableCases = cases.filter(
+    (item) => item.status === "PUBLISHED" || item.status === "CLAIMED",
+  );
   return (
     <section className="page">
       <div className="page-head board-head">
@@ -1844,7 +1958,7 @@ function Jobboard({
       </div>
       <div className="board-toolbar">
         <div className="result-count">
-          <strong>{cases.length}</strong> openstaande demo-opdrachten
+          <strong>{availableCases.length}</strong> openstaande demo-opdrachten
         </div>
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>
           <option>Alle specialisaties</option>
@@ -1857,7 +1971,7 @@ function Jobboard({
         </button>
       </div>
       <div className="job-list">
-        {cases.map((item, index) => (
+        {availableCases.map((item, index) => (
           <article
             className="job-row"
             key={item.id}
@@ -1909,6 +2023,12 @@ function Jobboard({
             </button>
           </article>
         ))}
+        {availableCases.length === 0 && (
+          <div className="empty-state">
+            <strong>Geen openstaande opdrachten</strong>
+            <span>Publiceer eerst een casus via de beheerdersrol om deze op het jobboard te tonen.</span>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -2026,6 +2146,26 @@ function CaseDetail({
               actuele wet- en regelgeving en ontbrekende feiten controleren.
             </p>
           </section>
+          {customer && item.status === "DELIVERED" && item.finalAnswer && (
+            <section className="section-block final-delivery">
+              <div className="block-title">
+                <span>04</span>
+                <h2>Definitief gecontroleerd antwoord</h2>
+                <small className="confidence">menselijke review afgerond</small>
+              </div>
+              <div className="final-answer-box">
+                <div className="ai-label">
+                  <Icon n="check" /> ADVISEURSCONTROLE · DEFINITIEF
+                </div>
+                <p>{item.finalAnswer}</p>
+                <span>
+                  Dit antwoord is gebaseerd op de geanonimiseerde casus en is
+                  door de adviseur gecontroleerd. De demo is geen professioneel
+                  advies of beveiligde productieomgeving.
+                </span>
+              </div>
+            </section>
+          )}
           {role === "advisor" &&
             (item.status === "PAID" || item.status === "IN_REVIEW") && (
               <section className="section-block">
