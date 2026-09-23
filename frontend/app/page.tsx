@@ -629,7 +629,7 @@ export default function Home() {
         );
       }
     },
-    claim = async (id: string) => {
+    claim = async (id: string, message = "Ik kan deze casus binnen één werkdag beoordelen en de broncontrole uitvoeren.") => {
       const current = cases.find((item) => item.id === id);
       if (!current?.backendId) {
         const demoClaim: ApiCase["claims"][number] = {
@@ -640,7 +640,7 @@ export default function Home() {
           expert_rating: 4.8,
           status: "PENDING_CUSTOMER",
           match_score: current.match || 86,
-          message: "Ik kan deze casus binnen één werkdag beoordelen.",
+          message,
           created_at: new Date().toISOString(),
           selected_at: null,
         };
@@ -665,7 +665,7 @@ export default function Home() {
       try {
         const result = await claimCase(
           current.backendId,
-          "Ik kan deze casus binnen één werkdag beoordelen.",
+          message,
         );
         setCases((items) =>
           items.map((item) =>
@@ -1077,7 +1077,7 @@ export default function Home() {
           item={selected}
           role={role}
           back={() => setView(role === "advisor" ? "jobboard" : "home")}
-          accept={() => claim(selected.id)}
+          accept={(message) => claim(selected.id, message)}
           pay={() =>
             pay(selected.id)
           }
@@ -2153,9 +2153,31 @@ function Jobboard({
   setFilter: (v: string) => void;
   open: (id: string) => void;
 }) {
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("match");
+  const [mode, setMode] = useState<"available" | "mine">("available");
+  const [showProfile, setShowProfile] = useState(false);
   const availableCases = cases.filter(
-    (item) => item.status === "PUBLISHED" || item.status === "CLAIMED",
+    (item) =>
+      mode === "mine"
+        ? item.status !== "PUBLISHED" &&
+          (item.claims?.some((claim) => claim.expert_name === "Mara van Dijk") ||
+            ["CLAIMED", "PAID", "IN_REVIEW", "NEEDS_INFORMATION", "DELIVERED"].includes(item.status))
+        : item.status === "PUBLISHED" || item.status === "CLAIMED",
   );
+  const visibleCases = [...availableCases]
+    .filter((item) => {
+      if (!search.trim()) return true;
+      const haystack = [item.title, item.summary, item.category, ...item.tags]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(search.trim().toLowerCase());
+    })
+    .sort((a, b) => {
+      if (sort === "fee") return Number(b.fee) - Number(a.fee);
+      if (sort === "time") return Number(a.minutes.match(/\d+/)?.[0] || 999) - Number(b.minutes.match(/\d+/)?.[0] || 999);
+      return b.match - a.match;
+    });
   return (
     <section className="page">
       <div className="page-head board-head">
@@ -2167,17 +2189,35 @@ function Jobboard({
             dossier.
           </p>
         </div>
-        <div className="profile-chip">
+        <button className="profile-chip profile-trigger" onClick={() => setShowProfile((value) => !value)}>
           <span className="avatar large">MV</span>
           <span>
             <b>Mara van Dijk</b>
             <small>Loonheffingen-specialist · actief</small>
           </span>
+          <span className="profile-chevron">{showProfile ? "−" : "+"}</span>
+        </button>
+      </div>
+      {showProfile && (
+        <div className="profile-panel">
+          <div>
+            <p className="eyebrow">UW ADVISEURSPROFIEL</p>
+            <h2>Mara van Dijk</h2>
+            <p className="muted">Loonheffingen-specialist · 4,8★ uit 27 reviews · actief</p>
+          </div>
+          <div className="profile-details">
+            <div><small>Specialisaties</small><b>Meerdere dienstbetrekkingen · werknemersverzekeringen · loonadministratie</b></div>
+            <div><small>Voorkeur</small><b>Particulier en werkgever · 20–45 minuten · vanaf €40</b></div>
+          </div>
         </div>
+      )}
+      <div className="board-mode" aria-label="Opdrachtenweergave">
+        <button className={mode === "available" ? "active" : ""} onClick={() => setMode("available")}>Beschikbaar</button>
+        <button className={mode === "mine" ? "active" : ""} onClick={() => setMode("mine")}>Mijn opdrachten</button>
       </div>
       <div className="board-toolbar">
         <div className="result-count">
-          <strong>{availableCases.length}</strong> openstaande demo-opdrachten
+          <strong>{visibleCases.length}</strong> {mode === "mine" ? "opdrachten in behandeling" : "passende demo-opdrachten"}
         </div>
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>
           <option>Alle specialisaties</option>
@@ -2185,12 +2225,18 @@ function Jobboard({
           <option>Btw</option>
           <option>Inkomstenbelasting</option>
         </select>
-        <button className="filter-button">
-          <Icon n="search" /> Zoek in casussen
-        </button>
+        <label className="board-search">
+          <Icon n="search" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Zoek op titel, tag of kernvraag" />
+        </label>
+        <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sorteer opdrachten">
+          <option value="match">Beste match</option>
+          <option value="fee">Hoogste vergoeding</option>
+          <option value="time">Kortste behandeltijd</option>
+        </select>
       </div>
       <div className="job-list">
-        {availableCases.map((item, index) => (
+        {visibleCases.map((item, index) => (
           <article
             className="job-row"
             key={item.id}
@@ -2242,10 +2288,10 @@ function Jobboard({
             </button>
           </article>
         ))}
-        {availableCases.length === 0 && (
+        {visibleCases.length === 0 && (
           <div className="empty-state">
-            <strong>Geen openstaande opdrachten</strong>
-            <span>Publiceer eerst een casus via de beheerdersrol om deze op het jobboard te tonen.</span>
+            <strong>{mode === "mine" ? "Nog geen eigen opdrachten" : search ? "Geen casus gevonden" : "Geen openstaande opdrachten"}</strong>
+            <span>{mode === "mine" ? "Geclaimde opdrachten verschijnen hier zodra een klant uw interesse heeft geselecteerd." : "Pas uw zoekopdracht aan of publiceer eerst een casus via de beheerdersrol."}</span>
           </div>
         )}
       </div>
@@ -2269,7 +2315,7 @@ function CaseDetail({
   item: CaseItem;
   role: Role;
   back: () => void;
-  accept: () => void;
+  accept: (message: string) => void;
   pay: () => void;
   choose: (id: string, claimId: string) => void;
   askInformation: (id: string, question: string) => void;
@@ -2281,6 +2327,7 @@ function CaseDetail({
   const customer = role === "customer";
   const [answer, setAnswer] = useState("");
   const [question, setQuestion] = useState("");
+  const [claimMessage, setClaimMessage] = useState("Ik kan deze casus binnen één werkdag beoordelen en de broncontrole uitvoeren.");
   return (
     <section className="page">
       <div className="detail-head">
@@ -2541,9 +2588,17 @@ function CaseDetail({
               </div>
             ))}
             {role === "advisor" && item.status === "PUBLISHED" && (
-              <button className="button primary full" onClick={accept}>
-                Accepteer opdracht <Icon n="arrow" />
-              </button>
+              <div className="claim-panel">
+                <div className="field-heading">
+                  <span>Uw reactie op deze casus</span>
+                  <ExampleButton onClick={() => setClaimMessage("Deze casus sluit aan op mijn ervaring met meerdere dienstbetrekkingen. Ik kan de broncontrole binnen één werkdag uitvoeren.")} />
+                </div>
+                <p className="muted">Laat kort zien waarom deze opdracht bij uw profiel past. De klant ziet dit bericht voordat hij een adviseur kiest.</p>
+                <textarea rows={4} value={claimMessage} onChange={(event) => setClaimMessage(event.target.value)} placeholder="Waarom past deze casus bij uw expertise?" />
+                <button className="button primary full" disabled={claimMessage.trim().length < 20} onClick={() => accept(claimMessage.trim())}>
+                  Interesse tonen <Icon n="arrow" />
+                </button>
+              </div>
             )}
             {customer &&
               (item.status === "AWAITING_PAYMENT" ||
