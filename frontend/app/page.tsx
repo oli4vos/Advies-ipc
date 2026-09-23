@@ -2838,6 +2838,18 @@ function Admin({
   open: (id: string) => void;
   publish: (id: string) => void;
 }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Alle statussen");
+  const visibleCases = [...cases]
+    .filter((item) => statusFilter === "Alle statussen" || item.status === statusFilter)
+    .filter((item) => {
+      if (!search.trim()) return true;
+      return `${item.id} ${item.title} ${item.category}`.toLowerCase().includes(search.trim().toLowerCase());
+    })
+    .sort((a, b) => Number(b.status === "PENDING_REVIEW") - Number(a.status === "PENDING_REVIEW"));
+  const auditItems = cases
+    .flatMap((item) => item.history.slice(0, 2).map((event) => ({ ...event, id: item.id })))
+    .slice(0, 6);
   return (
     <section className="page">
       <div className="page-head">
@@ -2856,9 +2868,24 @@ function Admin({
           <span>wachten op controle</span>
         </div>
       </div>
+      <div className="admin-toolbar">
+        <label className="board-search">
+          <Icon n="search" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Zoek op casus, titel of categorie" />
+        </label>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter casussen op status">
+          <option>Alle statussen</option>
+          <option>PENDING_REVIEW</option>
+          <option>PUBLISHED</option>
+          <option>CLAIMED</option>
+          <option>IN_REVIEW</option>
+          <option>DELIVERED</option>
+        </select>
+        <span className="admin-result-count">{visibleCases.length} van {cases.length} casussen</span>
+      </div>
       <div className="admin-grid">
         <div className="admin-list">
-          {cases.map((item) => (
+          {visibleCases.map((item) => (
             <div className="admin-row" key={item.id}>
               <div>
                 <span className="case-code">{item.id}</span>
@@ -2882,6 +2909,7 @@ function Admin({
               </div>
             </div>
           ))}
+          {visibleCases.length === 0 && <div className="empty-state"><strong>Geen casussen gevonden</strong><span>Pas de zoekterm of statusfilter aan.</span></div>}
         </div>
         <div className="admin-note">
           <Icon n="shield" />
@@ -2905,18 +2933,15 @@ function Admin({
       </div>
       <div className="audit">
         <p className="eyebrow">AUDITLOG</p>
-        <div>
-          <span>09:42:18</span>
-          <b>Case LH-1042</b>
-          <span>status → PUBLISHED</span>
-          <small>regelgebaseerde publicatiecontrole</small>
-        </div>
-        <div>
-          <span>09:41:57</span>
-          <b>Case BTW-1019</b>
-          <span>AI-concept gegenereerd</span>
-          <small>mock adapter · geen externe provider</small>
-        </div>
+        {auditItems.length === 0 && <small>Nog geen statuswijzigingen beschikbaar.</small>}
+        {auditItems.map((event, index) => (
+          <div key={`${event.id}-${event.label}-${index}`}>
+            <span>{event.date}</span>
+            <b>Case {event.id}</b>
+            <span>{event.label}</span>
+            <small>{event.label.toLowerCase().includes("ai") ? "mock adapter · geen externe provider" : "statuswijziging · demo auditspoor"}</small>
+          </div>
+        ))}
       </div>
     </section>
   );
