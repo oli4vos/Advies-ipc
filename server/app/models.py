@@ -113,7 +113,7 @@ class ExpertClaim(Base):
     selected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     case: Mapped[Case] = relationship(back_populates="claims")
-    expert: Mapped[User] = relationship()
+    expert: Mapped[User] = relationship(foreign_keys=[expert_id])
 
 
 class Payment(Base):
@@ -152,6 +152,9 @@ class InformationRequest(Base):
     evaluation_confidence: Mapped[int] = mapped_column(Integer, default=0)
     proposed_fee_delta_cents: Mapped[int] = mapped_column(Integer, default=0)
     approved_fee_delta_cents: Mapped[int] = mapped_column(Integer, default=0)
+    platform_decision_note: Mapped[str] = mapped_column(Text, default="")
+    platform_decided_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    platform_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     customer_answer: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -159,7 +162,7 @@ class InformationRequest(Base):
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     case: Mapped[Case] = relationship(back_populates="information_requests")
-    expert: Mapped[User] = relationship()
+    expert: Mapped[User] = relationship(foreign_keys=[expert_id])
 
 
 class RawCaseInput(Base):

@@ -22,6 +22,7 @@ from .schemas import (
     ExpertRead,
     ExpertReviewCreate,
     InformationAnswerCreate,
+    InformationRequestDecision,
     InformationRequestCreate,
     InformationRequestRead,
 )
@@ -44,6 +45,7 @@ from .services.marketplace import (
     submit_review,
     accept_information_fee,
     answer_information,
+    decide_information_request,
     request_information,
 )
 
@@ -126,6 +128,30 @@ def admin_publish_case(
     require_role(actor, "ADMIN")
     case = publish_case(session, get_case_or_404(session, case_id))
     return case_to_read(case, include_original=True)
+
+
+@router.post(
+    "/admin/cases/{case_id}/information-requests/{request_id}/decision",
+    response_model=CaseRead,
+)
+def decide_case_information_request(
+    case_id: str,
+    request_id: str,
+    payload: InformationRequestDecision,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> CaseRead:
+    require_role(actor, "ADMIN")
+    return case_to_read(
+        decide_information_request(
+            session,
+            get_case_or_404(session, case_id),
+            request_id,
+            payload,
+            admin=actor.user,
+        ),
+        include_original=True,
+    )
 
 
 @router.get("/jobboard", response_model=list[CaseListItem])

@@ -9,6 +9,7 @@ from ..schemas import (
     ClaimCreate,
     ExpertReviewCreate,
     InformationAnswerCreate,
+    InformationRequestDecision,
     InformationRequestCreate,
 )
 from .cases import _add_provenance, get_case_or_404
@@ -98,31 +99,18 @@ def request_information(
     info_request = models.InformationRequest(
         case_id=case.id,
         expert_id=expert.id,
-        status="PENDING_CUSTOMER" if required else "DECLINED",
+        status="PENDING_PLATFORM_REVIEW" if required else "DECLINED",
         question=payload.question,
         rationale=rationale,
         required_for_assessment=required,
         evaluation_origin="RULE_ENGINE",
         evaluation_confidence=confidence,
         proposed_fee_delta_cents=fee_delta,
-        approved_fee_delta_cents=fee_delta,
+        approved_fee_delta_cents=0,
         evaluated_at=now(),
     )
     session.add(info_request)
     session.flush()
-    if required:
-        previous = case.status
-        case.status = "NEEDS_INFORMATION"
-        case.version += 1
-        session.add(
-            models.CaseStatusHistory(
-                case_id=case.id,
-                from_status=previous,
-                to_status=case.status,
-                actor_type="SYSTEM",
-                reason="Aanvullende informatie is noodzakelijk verklaard; klant moet eerst antwoorden.",
-            )
-        )
     session.add(
         models.AuditLog(
             actor_type="SYSTEM",
@@ -134,7 +122,7 @@ def request_information(
                 "required_for_assessment": required,
                 "evaluation_origin": "RULE_ENGINE",
                 "confidence": confidence,
-                "fee_delta_cents": fee_delta,
+                "proposed_fee_delta_cents": fee_delta,
             },
         )
     )
@@ -146,11 +134,90 @@ def request_information(
         origin_type="SYSTEM_RULE",
         creation_method="EVALUATED",
         schema_version="information-request.v1",
-        value={"question": payload.question, "required": required, "fee_delta_cents": fee_delta},
+        value={"question": payload.question, "required": required, "proposed_fee_delta_cents": fee_delta},
     )
     session.expire(case, ["information_requests", "history", "provenance"])
     session.commit()
     return get_case_or_404(session, case.id).information_requests[-1]
+
+
+def decide_information_request(
+    session: Session,
+    case: models.Case,
+    request_id: str,
+    payload: InformationRequestDecision,
+    *,
+    admin: models.User,
+) -> models.Case:
+    info_request = session.scalar(
+        select(models.InformationRequest).where(
+            models.InformationRequest.id == request_id,
+            models.InformationRequest.case_id == case.id,
+        )
+    )
+    if info_request is None or info_request.status != "PENDING_PLATFORM_REVIEW":
+        raise HTTPException(status_code=409, detail="Deze informatievraag wacht niet op platformcontrole")
+    if payload.approve and not info_request.required_for_assessment:
+        raise HTTPException(status_code=409, detail="Alleen noodzakelijke vragen kunnen worden goedgekeurd")
+    if payload.approve and not 1_500 <= payload.approved_fee_delta_cents <= info_request.proposed_fee_delta_cents:
+        raise HTTPException(
+            status_code=422,
+            detail="De goedgekeurde toeslag moet tussen €15 en het voorgestelde bedrag liggen.",
+        )
+
+    info_request.platform_decided_by = admin.id
+    info_request.platform_decided_at = now()
+    info_request.platform_decision_note = payload.decision_note
+    if payload.approve:
+        info_request.status = "PENDING_CUSTOMER"
+        info_request.approved_fee_delta_cents = payload.approved_fee_delta_cents
+        previous = case.status
+        case.status = "NEEDS_INFORMATION"
+        case.version += 1
+        session.add(
+            models.CaseStatusHistory(
+                case_id=case.id,
+                from_status=previous,
+                to_status=case.status,
+                actor_type="ADMIN",
+                actor_id=admin.id,
+                reason="Platform keurde de noodzakelijke informatievraag en toeslag goed.",
+            )
+        )
+        action = "INFORMATION_REQUEST_APPROVED"
+    else:
+        info_request.status = "DECLINED"
+        info_request.required_for_assessment = False
+        info_request.approved_fee_delta_cents = 0
+        action = "INFORMATION_REQUEST_DECLINED"
+
+    session.add(
+        models.AuditLog(
+            actor_type="ADMIN",
+            actor_id=admin.id,
+            action=action,
+            object_type="InformationRequest",
+            object_id=info_request.id,
+            metadata_json={
+                "case_id": case.id,
+                "approved_fee_delta_cents": info_request.approved_fee_delta_cents,
+            },
+        )
+    )
+    _add_provenance(
+        session,
+        case=case,
+        entity_type="InformationRequestDecision",
+        entity_id=info_request.id,
+        origin_type="HUMAN_REVIEW",
+        creation_method="CREATED",
+        schema_version="information-request-decision.v1",
+        value={"approved": payload.approve, "fee_delta_cents": info_request.approved_fee_delta_cents},
+        producer_user_id=admin.id,
+    )
+    session.expire(case, ["information_requests", "history", "provenance"])
+    session.commit()
+    return get_case_or_404(session, case.id)
 
 
 def answer_information(
@@ -212,6 +279,8 @@ def accept_information_fee(
         raise HTTPException(status_code=409, detail="Deze informatievraag kan niet worden geaccepteerd")
     if info_request.status != "ANSWERED" or not info_request.required_for_assessment:
         raise HTTPException(status_code=409, detail="De klant moet eerst antwoorden op een noodzakelijke vraag")
+    if info_request.approved_fee_delta_cents <= 0:
+        raise HTTPException(status_code=409, detail="De toeslag is nog niet door het platform goedgekeurd")
     info_request.status = "AWAITING_PAYMENT"
     info_request.accepted_at = now()
     payment = models.Payment(

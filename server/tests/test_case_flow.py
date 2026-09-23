@@ -174,11 +174,32 @@ def test_fee_only_increases_for_platform_approved_required_information(client) -
     info = request.json()
     assert info["required_for_assessment"] is True
     assert info["evaluation_origin"] == "RULE_ENGINE"
-    assert info["approved_fee_delta_cents"] == 3000
+    assert info["status"] == "PENDING_PLATFORM_REVIEW"
+    assert info["proposed_fee_delta_cents"] == 3000
+    assert info["approved_fee_delta_cents"] == 0
 
-    waiting = client.get(f"/api/v1/cases/{case_id}").json()
-    assert waiting["status"] == "NEEDS_INFORMATION"
-    assert waiting["offered_fee_cents"] == base_fee
+    waiting_for_platform = client.get(f"/api/v1/cases/{case_id}").json()
+    assert waiting_for_platform["status"] == "PAID"
+    assert waiting_for_platform["offered_fee_cents"] == base_fee
+
+    unauthorised_decision = client.post(
+        f"/api/v1/admin/cases/{case_id}/information-requests/{info['id']}/decision",
+        json={"approve": True, "approved_fee_delta_cents": 3000},
+    )
+    assert unauthorised_decision.status_code == 403
+    approved = client.post(
+        f"/api/v1/admin/cases/{case_id}/information-requests/{info['id']}/decision",
+        json={
+            "approve": True,
+            "approved_fee_delta_cents": 3000,
+            "decision_note": "De loonstroken zijn nodig om de korting verantwoord te beoordelen.",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "NEEDS_INFORMATION"
+    assert approved.json()["information_requests"][-1]["status"] == "PENDING_CUSTOMER"
+    assert approved.json()["information_requests"][-1]["approved_fee_delta_cents"] == 3000
 
     answered = client.post(
         f"/api/v1/cases/{case_id}/information-requests/{info['id']}/answer",

@@ -437,6 +437,8 @@ def information_request_to_read(
         evaluation_confidence=request.evaluation_confidence,
         proposed_fee_delta_cents=request.proposed_fee_delta_cents,
         approved_fee_delta_cents=request.approved_fee_delta_cents,
+        platform_decision_note=request.platform_decision_note,
+        platform_decided_at=request.platform_decided_at,
         customer_answer=request.customer_answer,
         created_at=request.created_at,
         evaluated_at=request.evaluated_at,

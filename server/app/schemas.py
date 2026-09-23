@@ -188,6 +188,8 @@ class InformationRequestRead(BaseModel):
     evaluation_confidence: int
     proposed_fee_delta_cents: int
     approved_fee_delta_cents: int
+    platform_decision_note: str
+    platform_decided_at: datetime | None
     customer_answer: str
     created_at: datetime
     evaluated_at: datetime | None
@@ -202,6 +204,17 @@ class InformationRequestCreate(BaseModel):
     @field_validator("question")
     @classmethod
     def strip_question(cls, value: str) -> str:
+        return value.strip()
+
+
+class InformationRequestDecision(BaseModel):
+    approve: bool
+    approved_fee_delta_cents: int = Field(default=0, ge=0, le=5_000)
+    decision_note: str = Field(default="", max_length=2_000)
+
+    @field_validator("decision_note")
+    @classmethod
+    def strip_decision_note(cls, value: str) -> str:
         return value.strip()
 
 
