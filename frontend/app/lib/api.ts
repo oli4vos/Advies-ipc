@@ -89,6 +89,8 @@ export type ApiInformationRequest = {
   evaluation_confidence: number;
   proposed_fee_delta_cents: number;
   approved_fee_delta_cents: number;
+  platform_decision_note: string;
+  platform_decided_at: string | null;
   customer_answer: string;
   created_at: string;
   evaluated_at: string | null;
@@ -196,6 +198,15 @@ export async function listCaseDetails() {
   return Promise.all(cases.map((item) => getCase(item.id)));
 }
 
+export async function getJobboardCase(caseId: string) {
+  return request<ApiCase>(`/jobboard/${caseId}`);
+}
+
+export async function listJobboardDetails() {
+  const cases = await request<Array<{ id: string }>>("/jobboard");
+  return Promise.all(cases.map((item) => getJobboardCase(item.id)));
+}
+
 export async function confirmCaseStructure(caseId: string) {
   return request<ApiCase>(`/cases/${caseId}/confirm-structure`, {
     method: "POST",
@@ -249,6 +260,24 @@ export async function acceptInformationFee(caseId: string, requestId: string) {
   return request<ApiCase>(
     `/cases/${caseId}/information-requests/${requestId}/accept-fee`,
     { method: "POST" },
+  );
+}
+
+export async function decideInformationRequest(
+  caseId: string,
+  requestId: string,
+  approve: boolean,
+  approvedFeeDeltaCents = 0,
+) {
+  return request<ApiCase>(
+    `/admin/cases/${caseId}/information-requests/${requestId}/decision`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        approve,
+        approved_fee_delta_cents: approvedFeeDeltaCents,
+      }),
+    },
   );
 }
 

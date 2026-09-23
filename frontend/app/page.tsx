@@ -8,9 +8,11 @@ import {
   claimCase,
   confirmCaseStructure,
   createCase,
+  decideInformationRequest,
   getCase,
   hasLocalApi,
   listCaseDetails,
+  listJobboardDetails,
   payCase,
   publishCase,
   requestInformation,
@@ -399,19 +401,20 @@ export default function Home() {
       clientType: "Particulier",
       externalAi: "",
     });
-  useEffect(() => {
+  const loadBackendCases = async (activeRole: Role) => {
     if (!hasLocalApi()) return;
-    listCaseDetails()
-      .then((items) =>
-        setCases((current) => [
-          ...items.map(apiCaseToItem),
-          ...current.filter(
-            (existing) =>
-              !items.some((item) => item.public_code === existing.id),
-          ),
-        ]),
-      )
-      .catch(() => {});
+    try {
+      const items =
+        activeRole === "advisor"
+          ? await listJobboardDetails()
+          : await listCaseDetails();
+      setCases(items.map(apiCaseToItem));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Casussen konden niet worden geladen.");
+    }
+  };
+  useEffect(() => {
+    void loadBackendCases("customer");
   }, []);
   const selected = cases.find((c) => c.id === selectedId) || cases[0],
     filtered = useMemo(
@@ -424,6 +427,10 @@ export default function Home() {
   const changeRole = (r: Role) => {
       setRole(r);
       setDemoRole(r);
+      if (hasLocalApi()) {
+        setCases([]);
+        void loadBackendCases(r);
+      }
       setView(r === "advisor" ? "jobboard" : r === "admin" ? "admin" : "home");
     },
     open = (id: string) => {
@@ -591,6 +598,10 @@ export default function Home() {
     refreshBackendCase(id, (backendId) => answerInformation(backendId, requestId, answer));
   const acceptFee = (id: string, requestId: string) =>
     refreshBackendCase(id, (backendId) => acceptInformationFee(backendId, requestId));
+  const decideInfo = (id: string, requestId: string, approve: boolean, feeDeltaCents = 0) =>
+    refreshBackendCase(id, (backendId) =>
+      decideInformationRequest(backendId, requestId, approve, feeDeltaCents),
+    );
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (hasLocalApi()) {
@@ -782,6 +793,7 @@ export default function Home() {
           askInformation={askInformation}
           answerInformation={answerInfo}
           acceptInformationFee={acceptFee}
+          decideInformation={decideInfo}
           review={() => setView("review")}
         />
       )}{" "}
@@ -1672,6 +1684,7 @@ function CaseDetail({
   askInformation,
   answerInformation,
   acceptInformationFee,
+  decideInformation,
   review,
 }: {
   item: CaseItem;
@@ -1683,6 +1696,7 @@ function CaseDetail({
   askInformation: (id: string, question: string) => void;
   answerInformation: (id: string, requestId: string, answer: string) => void;
   acceptInformationFee: (id: string, requestId: string) => void;
+  decideInformation: (id: string, requestId: string, approve: boolean, feeDeltaCents?: number) => void;
   review: () => void;
 }) {
   const customer = role === "customer";
@@ -1846,6 +1860,46 @@ function CaseDetail({
                   Akkoord met noodzakelijke toeslag
                 </button>
               )}
+            </section>
+          )}
+          {role === "admin" && item.informationRequests?.at(-1)?.status === "PENDING_PLATFORM_REVIEW" && (
+            <section className="section-block">
+              <div className="block-title">
+                <span>04</span>
+                <h2>Platformcontrole toeslag</h2>
+                <small>menselijke beslissing vereist</small>
+              </div>
+              <div className="ai-box">
+                <b>{item.informationRequests.at(-1)?.question}</b>
+                <p>{item.informationRequests.at(-1)?.rationale}</p>
+                <small>
+                  Regelvoorstel · {item.informationRequests.at(-1)?.evaluation_confidence}% confidence · maximaal €{((item.informationRequests.at(-1)?.proposed_fee_delta_cents || 0) / 100).toFixed(2)}
+                </small>
+              </div>
+              <p className="muted">
+                Keur alleen goed wanneer de vraag noodzakelijk is voor een verantwoord oordeel. De klant ziet de vraag en toeslag pas na deze beslissing.
+              </p>
+              <div className="form-actions">
+                <button
+                  className="button secondary"
+                  onClick={() => decideInformation(item.id, item.informationRequests!.at(-1)!.id, false)}
+                >
+                  Afwijzen
+                </button>
+                <button
+                  className="button primary"
+                  onClick={() =>
+                    decideInformation(
+                      item.id,
+                      item.informationRequests!.at(-1)!.id,
+                      true,
+                      item.informationRequests!.at(-1)!.proposed_fee_delta_cents,
+                    )
+                  }
+                >
+                  Noodzaak en toeslag goedkeuren
+                </button>
+              </div>
             </section>
           )}
         </div>
