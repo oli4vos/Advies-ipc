@@ -66,6 +66,8 @@ type CaseItem = {
 };
 type PitchScenario = "conservative" | "base" | "growth";
 
+const DEMO_STORAGE_KEY = "fiscale-lijn-demo-state-v1";
+
 const pitchYears = [
   {
     year: "Jaar 1",
@@ -413,6 +415,7 @@ export default function Home() {
     [cases, setCases] = useState(casesSeed),
     [filter, setFilter] = useState("Alle specialisaties"),
     [notice, setNotice] = useState(""),
+    [storageReady, setStorageReady] = useState(false),
     [form, setForm] = useState({
       title: "",
       description: "",
@@ -435,8 +438,28 @@ export default function Home() {
     }
   };
   useEffect(() => {
-    void loadBackendCases("customer");
+    if (hasLocalApi()) {
+      setStorageReady(true);
+      void loadBackendCases("customer");
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(DEMO_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as CaseItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) setCases(parsed);
+      }
+    } catch {
+      setNotice("De demo-opslag kon niet worden geladen; de standaardcasussen zijn actief.");
+    } finally {
+      setStorageReady(true);
+    }
   }, []);
+  useEffect(() => {
+    if (!storageReady || hasLocalApi()) return;
+    window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(cases));
+  }, [cases, storageReady]);
   const selected = cases.find((c) => c.id === selectedId) || cases[0],
     filtered = useMemo(
       () =>
@@ -453,6 +476,16 @@ export default function Home() {
         void loadBackendCases(r);
       }
       setView(r === "advisor" ? "jobboard" : r === "admin" ? "admin" : "home");
+    },
+    resetDemo = () => {
+      if (!hasLocalApi()) window.localStorage.removeItem(DEMO_STORAGE_KEY);
+      setCases(casesSeed);
+      setSelectedId("LH-1042");
+      setRole("customer");
+      setDemoRole("customer");
+      setFilter("Alle specialisaties");
+      setView("home");
+      setNotice("Demo teruggezet naar de startsituatie.");
     },
     open = (id: string) => {
       setSelectedId(id);
@@ -532,11 +565,34 @@ export default function Home() {
     claim = async (id: string) => {
       const current = cases.find((item) => item.id === id);
       if (!current?.backendId) {
-        update(
-          id,
-          "CLAIMED",
-          "Interesse getoond. De klant kan adviseurs vergelijken.",
+        const demoClaim: ApiCase["claims"][number] = {
+          id: `demo-claim-${id}`,
+          expert_id: "demo-advisor",
+          expert_name: "Mara van Dijk",
+          expert_specialisation: "Loonheffingen-specialist",
+          expert_rating: 4.8,
+          status: "PENDING_CUSTOMER",
+          match_score: current.match || 86,
+          message: "Ik kan deze casus binnen één werkdag beoordelen.",
+          created_at: new Date().toISOString(),
+          selected_at: null,
+        };
+        setCases((items) =>
+          items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  claims: [...(item.claims || []), demoClaim],
+                  status: "CLAIMED",
+                  history: [
+                    { label: "Adviseur heeft interesse getoond", date: "Zojuist" },
+                    ...item.history,
+                  ],
+                }
+              : item,
+          ),
         );
+        setNotice("Interesse geregistreerd. De klant kan adviseurs vergelijken.");
         return;
       }
       try {
@@ -566,12 +622,37 @@ export default function Home() {
         );
       }
     },
-    choose = async (id: string, claimId: string) =>
-      saveCase(
+    choose = async (id: string, claimId: string) => {
+      const current = cases.find((item) => item.id === id);
+      if (!current?.backendId) {
+        setCases((items) =>
+          items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: "AWAITING_PAYMENT",
+                  claims: item.claims?.map((claim) =>
+                    claim.id === claimId
+                      ? { ...claim, status: "SELECTED", selected_at: new Date().toISOString() }
+                      : { ...claim, status: "DECLINED" },
+                  ),
+                  history: [
+                    { label: "Adviseur gekozen; betaling nodig", date: "Zojuist" },
+                    ...item.history,
+                  ],
+                }
+              : item,
+          ),
+        );
+        setNotice("Adviseur gekozen. Het mock-betaalverzoek staat klaar.");
+        return;
+      }
+      await saveCase(
         id,
         (backendId) => selectClaim(backendId, claimId),
         "Adviseur gekozen. Het mock-betaalverzoek staat klaar.",
-      ),
+      );
+    },
     pay = async (id: string) =>
       saveCase(id, payCase, "Mockbetaling ontvangen. De adviseur kan starten."),
     reviewSubmit = async (id: string, input: ReviewInput) => {
@@ -703,7 +784,7 @@ export default function Home() {
     setSelectedId(n.id);
     setView("structured");
     setNotice(
-      "Demo-casus tijdelijk in deze browser verwerkt; er is op GitHub Pages geen opslag.",
+      "Demo-casus opgeslagen in deze browser. De status blijft na verversen bewaard.",
     );
     setForm({
       title: "",
@@ -724,9 +805,11 @@ export default function Home() {
           invoeren.
         </strong>
         <span>
-          Deze GitHub Pages-versie heeft geen veilige opslag, authenticatie of
-          productie-anonimisering.
+          Demo-opslag in deze browser · geen veilige productieomgeving.
         </span>
+        <button className="demo-reset" onClick={resetDemo}>
+          Demo resetten
+        </button>
       </div>
       <header className="topbar">
         <div className="brand" onClick={() => setView("home")}>

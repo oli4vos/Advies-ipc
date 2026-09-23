@@ -98,7 +98,10 @@ def test_customer_must_confirm_anonymisation_before_structure_confirmation(clien
     created = client.post("/api/v1/cases", json=PAYLOAD).json()
     case_id = created["id"]
 
-    blocked = client.post(f"/api/v1/cases/{case_id}/confirm-structure")
+    blocked = client.post(
+        f"/api/v1/cases/{case_id}/confirm-structure",
+        json={"anonymisation_confirmed": False},
+    )
     assert blocked.status_code == 422
     assert "anonimise" in blocked.json()["detail"]
 
