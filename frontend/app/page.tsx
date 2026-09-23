@@ -718,7 +718,7 @@ export default function Home() {
           <button onClick={() => setView("businesscase")}>Businesscase</button>
         </nav>
         <div className="role-switch">
-          <span>Demo als</span>
+          <span>Demomodus</span>
           <select
             value={role}
             onChange={(e) => changeRole(e.target.value as Role)}
@@ -732,6 +732,7 @@ export default function Home() {
           </span>
         </div>
       </header>
+      <DemoFlow role={role} view={view} onIntake={() => setView("intake")} onBoard={() => changeRole("advisor")} onAdmin={() => setView("admin")} />
       {notice && (
         <div className="notice">
           <Icon n="check" />
@@ -742,10 +743,7 @@ export default function Home() {
       {view === "home" && (
         <HomeView
           onIntake={() => setView("intake")}
-          onBoard={() => {
-            setRole("advisor");
-            setView("jobboard");
-          }}
+          onBoard={() => changeRole("advisor")}
           open={open}
           cases={cases}
         />
@@ -1162,6 +1160,66 @@ function BusinessCase() {
   );
 }
 
+function DemoFlow({
+  role,
+  view,
+  onIntake,
+  onBoard,
+  onAdmin,
+}: {
+  role: Role;
+  view: string;
+  onIntake: () => void;
+  onBoard: () => void;
+  onAdmin: () => void;
+}) {
+  const steps =
+    role === "advisor"
+      ? ["Bekijk opdracht", "Claim casus", "Review antwoord"]
+      : role === "admin"
+        ? ["Controleer casus", "Publiceer", "Bewaak kwaliteit"]
+        : ["Dien casus in", "Kies adviseur", "Ontvang antwoord"];
+  const activeIndex =
+    role === "customer"
+      ? view === "home"
+        ? 0
+        : view === "intake" || view === "structured"
+          ? 0
+          : view === "case"
+            ? 1
+            : 0
+      : role === "advisor"
+        ? view === "jobboard"
+          ? 0
+          : view === "review"
+            ? 2
+            : 1
+        : view === "admin"
+          ? 0
+          : 1;
+
+  return (
+    <div className="demo-flow" aria-label="Voortgang in demomodus">
+      <div className="demo-flow-inner">
+        <span className="demo-flow-label">{role === "customer" ? "KLANT" : role === "advisor" ? "ADVISEUR" : "BEHEERDER"} · DEMO</span>
+        <div className="demo-flow-steps">
+          {steps.map((step, index) => (
+            <span className={index <= activeIndex ? "is-active" : ""} key={step}>
+              <b>0{index + 1}</b> {step}
+            </span>
+          ))}
+        </div>
+        <button
+          className="demo-flow-action"
+          onClick={role === "advisor" ? onBoard : role === "admin" ? onAdmin : onIntake}
+        >
+          {role === "advisor" ? "Naar opdrachten" : role === "admin" ? "Naar controle" : "Start demo"} <Icon n="arrow" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function HomeView({
   onIntake,
   onBoard,
@@ -1177,7 +1235,7 @@ function HomeView({
     <>
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">FISCALE LIJN / LOKALE MVP</p>
+          <p className="eyebrow">FISCALE LIJN / LOKALE DEMO · GEEN LOGIN NODIG</p>
           <h1>
             Een fiscale vraag verdient eerst een scherpe <em>route.</em>
           </h1>
@@ -1235,23 +1293,33 @@ function HomeView({
         <div className="process-grid">
           <Process
             n="01"
-            title="Casus indienen"
-            text="Een gestructureerde intake met ruimte voor eigen documenten en een al bestaand AI-antwoord."
+            title="Plak wat u heeft"
+            text="Een rommelig verhaal, losse feiten of een eerder AI-antwoord zijn welkom."
           />
           <Process
             n="02"
-            title="Eerste analyse"
-            text="Lokale regels maken samenvatting, tags, risico's en ontbrekende feiten zichtbaar."
+            title="Wij structureren"
+            text="De casus wordt geanonimiseerd, samengevat en voorzien van fiscale tags."
           />
           <Process
             n="03"
-            title="Adviseur accepteert"
-            text="Een expert kiest een passende opdracht op basis van tijd, vergoeding en specialisatie."
+            title="Adviseur kiest"
+            text="Een expert ziet direct specialisatie, behandeltijd, vergoeding en match."
           />
           <Process
             n="04"
-            title="Menselijke controle"
-            text="De adviseur toetst het concept, verbetert het en levert een onderbouwd antwoord."
+            title="Klant betaalt"
+            text="Pas na acceptatie staat een transparant mock-betaalverzoek klaar."
+          />
+          <Process
+            n="05"
+            title="Expert controleert"
+            text="De adviseur toetst AI-conclusies, bronnen en ontbrekende feiten."
+          />
+          <Process
+            n="06"
+            title="Antwoord geleverd"
+            text="De klant ontvangt een duidelijk gescheiden, gecontroleerd eindantwoord."
           />
         </div>
       </section>

@@ -36,3 +36,17 @@
 .signal .pulse::after,.ai-label .pulse::after{content:"";position:absolute;inset:-4px;border:1px solid #5b9a71;border-radius:50%;animation:live-ring 2.4s cubic-bezier(.16,1,.3,1) infinite;pointer-events:none}
 .route-item.active b,.route-item.active strong{animation:active-route 3.2s cubic-bezier(.16,1,.3,1) infinite;will-change:transform}
 @media(prefers-reduced-motion:reduce){.signal .pulse,.ai-label .pulse,.route-item.active b,.route-item.active strong{animation:none}.signal .pulse::after,.ai-label .pulse::after{display:none}}
+
+.demo-flow{border-bottom:1px solid var(--line);background:rgba(255,255,255,.72)}
+.demo-flow-inner{max-width:1240px;margin:auto;padding:10px 5vw;display:flex;align-items:center;gap:25px}
+.demo-flow-label{font:700 9px 'Space Grotesk';letter-spacing:.14em;color:var(--accent);white-space:nowrap}
+.demo-flow-steps{display:flex;align-items:center;gap:0;flex:1}
+.demo-flow-steps span{font-size:11px;color:#a1aaa3;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.demo-flow-steps span:not(:last-child)::after{content:"";display:block;width:28px;border-top:1px solid var(--line);margin:0 9px}
+.demo-flow-steps span.is-active{color:var(--green)}
+.demo-flow-steps b{font:700 9px 'Space Grotesk';letter-spacing:.05em}
+.demo-flow-action{border:0;background:none;color:var(--green);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:5px 0}
+.demo-flow-action .icon{width:14px;height:14px;transition:transform .2s ease}
+.demo-flow-action:hover .icon{transform:translateX(3px)}
+@media(max-width:700px){.demo-flow-inner{padding:9px 20px;gap:12px;overflow-x:auto}.demo-flow-label{font-size:8px}.demo-flow-steps{flex:none}.demo-flow-steps span{font-size:10px}.demo-flow-steps span:not(:last-child)::after{width:15px;margin:0 6px}.demo-flow-action{display:none}}
+@media(prefers-reduced-motion:reduce){.demo-flow-action .icon{transition:none}}
