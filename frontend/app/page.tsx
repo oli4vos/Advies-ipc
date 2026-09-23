@@ -64,6 +64,15 @@ type CaseItem = {
   anonymizedDescription?: string;
   informationRequests?: ApiCase["information_requests"];
 };
+type IntakeForm = {
+  title: string;
+  description: string;
+  question: string;
+  category: string;
+  year: string;
+  clientType: string;
+  externalAi: string;
+};
 type PitchScenario = "conservative" | "base" | "growth";
 
 const DEMO_STORAGE_KEY = "fiscale-lijn-demo-state-v1";
@@ -1984,12 +1993,12 @@ function Intake({
   onSubmit,
   onCancel,
 }: {
-  form: any;
-  setForm: (v: any) => void;
+  form: IntakeForm;
+  setForm: (v: IntakeForm) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }) {
-  const set = (k: string, v: string) => setForm({ ...form, [k]: v });
+  const set = (k: keyof IntakeForm, v: string) => setForm({ ...form, [k]: v });
   const fillExample = () =>
     setForm({
       ...form,
@@ -2160,9 +2169,7 @@ function Jobboard({
   const availableCases = cases.filter(
     (item) =>
       mode === "mine"
-        ? item.status !== "PUBLISHED" &&
-          (item.claims?.some((claim) => claim.expert_name === "Mara van Dijk") ||
-            ["CLAIMED", "PAID", "IN_REVIEW", "NEEDS_INFORMATION", "DELIVERED"].includes(item.status))
+        ? item.claims?.some((claim) => claim.expert_name === "Mara van Dijk")
         : item.status === "PUBLISHED" || item.status === "CLAIMED",
   );
   const visibleCases = [...availableCases]
