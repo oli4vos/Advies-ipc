@@ -337,6 +337,14 @@ function Icon({ n }: { n: string }) {
   );
 }
 
+function ExampleButton({ onClick, label = "Voorbeeld invullen" }: { onClick: () => void; label?: string }) {
+  return (
+    <button type="button" className="example-button" onClick={onClick}>
+      <Icon n="file" /> {label}
+    </button>
+  );
+}
+
 function apiCaseToItem(item: ApiCase): CaseItem {
   const source = item.sources[0];
   return {
@@ -1510,6 +1518,20 @@ function Intake({
   onCancel: () => void;
 }) {
   const set = (k: string, v: string) => setForm({ ...form, [k]: v });
+  const fillExample = () =>
+    setForm({
+      ...form,
+      title: "Dubbele loonheffingskorting bij twee werkgevers",
+      description:
+        "Ik werk sinds januari 2025 bij twee werkgevers. Op beide loonstroken lijkt de loonheffingskorting te zijn toegepast. Ik wil voorkomen dat ik bij mijn aangifte moet bijbetalen en weten welke werkgever de korting moet aanpassen.",
+      question:
+        "Welke gevolgen heeft dit voor mijn aangifte en welke actie moet ik richting mijn werkgevers nemen?",
+      category: "Loonheffingen",
+      year: "2025",
+      clientType: "Particulier",
+      externalAi:
+        "Een eerder AI-antwoord zei dat er waarschijnlijk niets hoeft te gebeuren, maar gaf geen bron. Kunnen jullie controleren of dat klopt?",
+    });
   return (
     <section className="page narrow">
       <div className="page-head">
@@ -1526,9 +1548,16 @@ function Intake({
         </button>
       </div>
       <form className="form" onSubmit={onSubmit}>
+        <div className="example-callout">
+          <div>
+            <strong>Even zien hoe dit werkt?</strong>
+            <span>Vul een realistische fictieve casus in en pas daarna zelf aan.</span>
+          </div>
+          <ExampleButton onClick={fillExample} />
+        </div>
         <label className="free-input">
           <span>
-            Wat speelt er? <small>verplicht</small>
+            Wat speelt er? <small>verplicht</small> <ExampleButton onClick={fillExample} label="Voorbeeld" />
           </span>
           <textarea
             required
@@ -1544,7 +1573,7 @@ function Intake({
         </label>
         <div className="form-grid">
           <label>
-            Voorlopige titel <small>optioneel</small>
+            Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Dubbele loonheffingskorting bij twee werkgevers")} label="Voorbeeld" />
             <input
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
@@ -1564,8 +1593,8 @@ function Intake({
             </select>
           </label>
         </div>
-        <label>
-          Als u één ding zeker wilt weten <small>optioneel</small>
+          <label>
+            Als u één ding zeker wilt weten <small>optioneel</small> <ExampleButton onClick={() => set("question", "Welke gevolgen heeft dit voor mijn aangifte en welke actie moet ik richting mijn werkgevers nemen?")} label="Voorbeeld" />
           <textarea
             rows={3}
             value={form.question}
@@ -1603,7 +1632,7 @@ function Intake({
         </div>
         <label className="external">
           <span>
-            AI-antwoord dat u al elders heeft gekregen <small>optioneel</small>
+            AI-antwoord dat u al elders heeft gekregen <small>optioneel</small> <ExampleButton onClick={() => set("externalAi", "Een eerder AI-antwoord zei dat er waarschijnlijk niets hoeft te gebeuren, maar gaf geen bron. Kunnen jullie controleren of dat klopt?")} label="Voorbeeld" />
           </span>
           <textarea
             rows={5}
@@ -1866,6 +1895,16 @@ function CaseDetail({
                   Stel alleen een vraag die noodzakelijk is voor een verantwoord oordeel.
                   De regelengine beoordeelt eerst of een toeslag gerechtvaardigd is.
                 </p>
+                <div className="field-heading">
+                  <span>Vraag aan de klant</span>
+                  <ExampleButton
+                    onClick={() =>
+                      setQuestion(
+                        "Kunt u de loonstroken van beide werkgevers over 2025 aanleveren?",
+                      )
+                    }
+                  />
+                </div>
                 <textarea
                   rows={3}
                   value={question}
@@ -1902,6 +1941,16 @@ function CaseDetail({
               </div>
               {item.informationRequests.at(-1)?.status === "PENDING_CUSTOMER" && (
                 <>
+                  <div className="field-heading">
+                    <span>Uw antwoord</span>
+                    <ExampleButton
+                      onClick={() =>
+                        setAnswer(
+                          "Ik lever de loonstroken van beide werkgevers over 2025 aan. De namen en contactgegevens zijn afgeschermd.",
+                        )
+                      }
+                    />
+                  </div>
                   <textarea
                     rows={4}
                     value={answer}
@@ -2086,6 +2135,15 @@ function Review({
       current.map((value, index) => (index === i ? !value : value)),
     );
   const canSubmit = checks.every(Boolean);
+  const fillExample = () => {
+    setFinalAnswer(
+      `${item.aiAnswer}\n\nAanvulling adviseur: De conclusie geldt alleen wanneer beide werkgevers de loonheffingskorting daadwerkelijk hebben toegepast. Controleer daarom eerst de loonstroken en de jaaropgaven.`,
+    );
+    setNotes(
+      "De AI-conclusie is inhoudelijk bruikbaar, maar de loonstroken en jaaropgaven moeten worden gecontroleerd. De onzekerheid en vervolgstap zijn daarom expliciet aan de klant uitgelegd.",
+    );
+    setChecks([true, true, true, true]);
+  };
   return (
     <section className="page">
       <div className="page-head">
@@ -2103,6 +2161,13 @@ function Review({
       </div>
       <div className="review-grid">
         <div>
+          <div className="example-callout review-example-callout">
+            <div>
+              <strong>Voorbeeldreview laden</strong>
+              <span>Vult een controleerbaar antwoord, toelichting en controlepunten in.</span>
+            </div>
+            <ExampleButton onClick={fillExample} />
+          </div>
           <div className="review-pane">
             <div className="pane-head">
               <span>PLATFORM-ANALYSE</span>
@@ -2129,7 +2194,10 @@ function Review({
             </div>
           )}
           <label className="final-answer">
-            Definitief gecontroleerd antwoord
+            <span className="field-heading">
+              <span>Definitief gecontroleerd antwoord</span>
+              <ExampleButton onClick={fillExample} label="Voorbeeld" />
+            </span>
             <textarea
               rows={9}
               value={finalAnswer}
@@ -2156,7 +2224,10 @@ function Review({
               </label>
             ))}
             <label>
-              Toelichting voor klant
+              <span className="field-heading">
+                <span>Toelichting voor klant</span>
+                <ExampleButton onClick={() => setNotes("De belangrijkste feiten en bronnen zijn gecontroleerd. Waar informatie ontbreekt, is dat expliciet benoemd.")} label="Voorbeeld" />
+              </span>
               <textarea
                 rows={4}
                 value={notes}
