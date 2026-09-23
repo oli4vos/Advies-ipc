@@ -401,11 +401,40 @@ function apiCaseToItem(item: ApiCase): CaseItem {
 
 function demoAnonymise(text: string) {
   return text
+    .replace(/\b[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:straat|laan|weg|plein|gracht|kade|singel)\s+\d{1,5}[a-zA-Z]?\b/g, "[ADRES]")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[E-MAIL]")
     .replace(/\b(?:06|\+31)[ -]?\d(?:[ -]?\d){8}\b/g, "[TELEFOONNUMMER]")
     .replace(/\b\d{4}\s?[A-Z]{2}\b/gi, "[POSTCODE]")
     .replace(/\bBSN\s*[:=]?\s*\d{8,9}\b/gi, "BSN [BSN VERWIJDERD]")
-    .replace(/\bKVK\s*[:=]?\s*\d{8}\b/gi, "KvK [KVK VERWIJDERD]");
+    .replace(/\bKVK\s*[:=]?\s*\d{8}\b/gi, "KvK [KVK VERWIJDERD]")
+    .replace(/\b(?:mijn naam is|de heer|mevrouw)\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:\s+[A-ZÀ-ÖØ-Ý][a-zà-öøÿ'’-]+){0,2}/gi, "[PERSOON]")
+    .replace(/\bwerkgever\s*[:=]\s*[^,.\n]+/gi, "werkgever: [WERKGEVER]");
+}
+
+type SensitiveFinding = { label: string; value: string; index: number };
+
+const sensitivePatterns: Array<[string, RegExp]> = [
+  ["E-mailadres", /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi],
+  ["IBAN", /\bNL\d{2}(?:\s?[A-Z]{4})(?:\s?\d{4}){2}\s?\d{2}\b/gi],
+  ["Telefoonnummer", /(?<!\w)(?:\+31|0031|0)[ -]?(?:\d[ -]?){8,9}(?!\w)/g],
+  ["Postcode", /\b\d{4}\s?[A-Z]{2}\b/gi],
+  ["BSN", /\bBSN\s*[:=]?\s*\d{8,9}\b/gi],
+  ["KvK-nummer", /\bKVK\s*[:=]?\s*\d{8}\b/gi],
+  ["Adres", /\b[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:straat|laan|weg|plein|gracht|kade|singel)\s+\d{1,5}[a-zA-Z]?\b/g],
+  ["Naam", /\b(?:mijn naam is|de heer|mevrouw)\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+){0,2}/gi],
+  ["Gemarkeerde werkgever", /\bwerkgever\s*[:=]\s*(?!\[[^\]]+\])[^,.\n]+/gi],
+];
+
+function findSensitiveData(text: string): SensitiveFinding[] {
+  return sensitivePatterns
+    .flatMap(([label, pattern]) =>
+      Array.from(text.matchAll(new RegExp(pattern.source, pattern.flags))).map((match) => ({
+        label,
+        value: match[0],
+        index: match.index || 0,
+      })),
+    )
+    .sort((a, b) => a.index - b.index);
 }
 
 export default function Home() {
@@ -491,7 +520,12 @@ export default function Home() {
       setSelectedId(id);
       setView("case");
     },
-    update = async (id: string, status: Status, msg: string) => {
+    update = async (
+      id: string,
+      status: Status,
+      msg: string,
+      anonymizedText?: string,
+    ) => {
       const current = cases.find((item) => item.id === id);
       if (
         current?.backendId &&
@@ -501,7 +535,11 @@ export default function Home() {
           const saved =
             status === "PUBLISHED"
               ? await publishCase(current.backendId)
-              : await confirmCaseStructure(current.backendId, true);
+              : await confirmCaseStructure(
+                  current.backendId,
+                  true,
+                  anonymizedText || current.anonymizedDescription || "",
+                );
           const mapped = apiCaseToItem(saved);
           setCases((items) =>
             items.map((item) => (item.id === id ? mapped : item)),
@@ -523,6 +561,7 @@ export default function Home() {
             ? {
                 ...item,
                 status,
+                anonymizedDescription: anonymizedText || item.anonymizedDescription,
                 history: [{ label: msg, date: "Zojuist" }, ...item.history],
               }
             : item,
@@ -976,11 +1015,12 @@ export default function Home() {
       {view === "structured" && (
         <StructuredCase
           item={selected}
-          confirm={() => {
+          confirm={(anonymizedText) => {
             update(
               selected.id,
               "PENDING_REVIEW",
               "Structuur bevestigd. Casus wacht op beheercontrole.",
+              anonymizedText,
             );
             setView("case");
           }}
@@ -1618,17 +1658,30 @@ function StructuredCase({
   edit,
 }: {
   item: CaseItem;
-  confirm: () => void;
+  confirm: (anonymizedText: string) => void;
   edit: () => void;
 }) {
   const [anonymisationApproved, setAnonymisationApproved] = useState(false);
+  const [anonymizedText, setAnonymizedText] = useState(
+    item.anonymizedDescription || item.summary || "",
+  );
   const originalText =
     item.originalDescription ||
     "Uw oorspronkelijke vrije tekst blijft alleen zichtbaar in uw klantomgeving.";
-  const anonymizedText =
-    item.anonymizedDescription ||
-    item.summary ||
-    "Er is nog geen geanonimiseerde tekst beschikbaar.";
+  const findings = findSensitiveData(anonymizedText);
+  const previewParts: Array<React.ReactNode> = [];
+  let previewCursor = 0;
+  findings.forEach((finding, index) => {
+    if (finding.index < previewCursor) return;
+    previewParts.push(anonymizedText.slice(previewCursor, finding.index));
+    previewParts.push(
+      <mark className="sensitive-mark" key={`${finding.label}-${index}`}>
+        {finding.value}
+      </mark>,
+    );
+    previewCursor = finding.index + finding.value.length;
+  });
+  previewParts.push(anonymizedText.slice(previewCursor));
   return (
     <section className="page narrow">
       <div className="page-head">
@@ -1670,7 +1723,26 @@ function StructuredCase({
           </div>
           <div className="anonymised-preview">
             <span className="card-label">NAAR ADVISEURS</span>
-            <p>{anonymizedText}</p>
+            <div className="privacy-preview-text">{previewParts}</div>
+            <label className="privacy-edit-label">
+              Geanonimiseerde tekst aanpassen
+              <textarea
+                rows={6}
+                value={anonymizedText}
+                onChange={(event) => {
+                  setAnonymizedText(event.target.value);
+                  setAnonymisationApproved(false);
+                }}
+              />
+            </label>
+            {findings.length > 0 ? (
+              <div className="privacy-warning">
+                <b>{findings.length} mogelijk herkenbare gegevens gevonden</b>
+                <span>{findings.map((finding) => finding.label).join(" · ")}</span>
+              </div>
+            ) : (
+              <div className="privacy-safe">Geen herkenbare patronen gevonden.</div>
+            )}
           </div>
         </div>
         <label className="approval-row">
@@ -1684,6 +1756,12 @@ function StructuredCase({
             deze versie aan adviseurs wordt getoond.
           </span>
         </label>
+        <div className="privacy-review-actions">
+          <button type="button" className="text-button" onClick={edit}>
+            Dit klopt niet — terug naar aanpassen
+          </button>
+          <span>{findings.length > 0 ? "Verwijder eerst de gemarkeerde gegevens." : "De tekst kan ter beoordeling worden aangeboden."}</span>
+        </div>
       </section>
       <div className="structure-grid">
         <section className="structure-card">
@@ -1750,8 +1828,8 @@ function StructuredCase({
         </button>
         <button
           className="button primary"
-          disabled={!anonymisationApproved}
-          onClick={confirm}
+          disabled={!anonymisationApproved || findings.length > 0}
+          onClick={() => confirm(anonymizedText)}
         >
           Klopt, laat beoordelen <Icon n="arrow" />
         </button>

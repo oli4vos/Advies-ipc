@@ -105,9 +105,22 @@ def test_customer_must_confirm_anonymisation_before_structure_confirmation(clien
     assert blocked.status_code == 422
     assert "anonimise" in blocked.json()["detail"]
 
+    leaky = client.post(
+        f"/api/v1/cases/{case_id}/confirm-structure",
+        json={
+            "anonymisation_confirmed": True,
+            "anonymized_text": f"{created['anonymized_description']} contact@example.nl",
+        },
+    )
+    assert leaky.status_code == 422
+    assert "EMAIL" in leaky.json()["detail"]
+
     confirmed = client.post(
         f"/api/v1/cases/{case_id}/confirm-structure",
-        json={"anonymisation_confirmed": True},
+        json={
+            "anonymisation_confirmed": True,
+            "anonymized_text": created["anonymized_description"],
+        },
     )
     assert confirmed.status_code == 200
     assert confirmed.json()["status"] == "PENDING_REVIEW"

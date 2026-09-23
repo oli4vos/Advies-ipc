@@ -117,7 +117,12 @@ def confirm_case_structure(
 ) -> CaseRead:
     case = get_case_or_404(session, case_id)
     require_case_customer(actor, case)
-    case = confirm_structure(session, case, payload.anonymisation_confirmed)
+    case = confirm_structure(
+        session,
+        case,
+        payload.anonymisation_confirmed,
+        payload.anonymized_text,
+    )
     return case_to_read(case, include_original=True)
 
 

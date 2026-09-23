@@ -60,8 +60,8 @@ PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "COMPANY",
         re.compile(
-            r"(?i)(?P<prefix>\b(?:bedrijfsnaam|werkgever)\s*[:=]\s*)"
-            r"(?P<value>[^\n,.;]{2,100})"
+            r"(?i)(?P<prefix>\b(?:bedrijfsnaam|werkgever)\s*[:=])"
+            r"(?P<value>(?!\s*\[[^\]]+\])\s*[^\n,.;]{2,100})"
         ),
         "[BEDRIJF]",
     ),

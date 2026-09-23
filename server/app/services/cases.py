@@ -327,7 +327,10 @@ def create_case(session: Session, payload: CaseCreate, *, customer: models.User)
 
 
 def confirm_structure(
-    session: Session, case: models.Case, anonymisation_confirmed: bool = False
+    session: Session,
+    case: models.Case,
+    anonymisation_confirmed: bool = False,
+    anonymized_text: str = "",
 ) -> models.Case:
     if not anonymisation_confirmed:
         raise HTTPException(
@@ -338,6 +341,17 @@ def confirm_structure(
         raise HTTPException(status_code=409, detail="Alleen een casus in controle kan worden bevestigd")
     if case.summary is None:
         raise HTTPException(status_code=409, detail="Casussamenvatting ontbreekt")
+    if case.anonymized is None:
+        raise HTTPException(status_code=409, detail="Geanonimiseerde casus ontbreekt")
+    if anonymized_text:
+        residual = anonymise(anonymized_text)
+        if residual.entity_counts:
+            labels = ", ".join(residual.entity_counts)
+            raise HTTPException(
+                status_code=422,
+                detail=f"De geanonimiseerde tekst bevat nog herkenbare gegevens: {labels}",
+            )
+        case.anonymized.anonymized_text = anonymized_text
     case.summary.confirmed_at = datetime.now(timezone.utc)
     for fact in case.facts:
         fact.customer_confirmation = "CONFIRMED"
@@ -359,7 +373,11 @@ def confirm_structure(
             action="CASE_STRUCTURE_CONFIRMED",
             object_type="Case",
             object_id=case.id,
-            metadata_json={"version": case.version, "anonymisation_confirmed": True},
+            metadata_json={
+                "version": case.version,
+                "anonymisation_confirmed": True,
+                "anonymisation_edited": bool(anonymized_text),
+            },
         )
     )
     session.commit()

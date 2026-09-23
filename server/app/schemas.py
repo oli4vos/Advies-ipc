@@ -22,6 +22,12 @@ class CaseCreate(BaseModel):
 
 class StructureConfirmation(BaseModel):
     anonymisation_confirmed: bool = False
+    anonymized_text: str = Field(default="", max_length=20_000)
+
+    @field_validator("anonymized_text")
+    @classmethod
+    def strip_anonymized_text(cls, value: str) -> str:
+        return value.strip()
 
 
 class FactRead(BaseModel):
