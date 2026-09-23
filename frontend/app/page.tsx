@@ -67,6 +67,7 @@ type CaseItem = {
 type PitchScenario = "conservative" | "base" | "growth";
 
 const DEMO_STORAGE_KEY = "fiscale-lijn-demo-state-v1";
+const DEMO_DRAFT_KEY = "fiscale-lijn-intake-draft-v1";
 
 const pitchYears = [
   {
@@ -333,6 +334,7 @@ function Icon({ n }: { n: string }) {
     file: "M6 3h8l4 4v14H6zM14 3v5h4",
     search: "m20 20-4-4m1-5a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z",
     lock: "M7 10V8a5 5 0 0 1 10 0v2m-9 0h8v10H8z",
+    bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-7 13h4",
   };
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="icon">
@@ -445,6 +447,7 @@ export default function Home() {
     [filter, setFilter] = useState("Alle specialisaties"),
     [notice, setNotice] = useState(""),
     [storageReady, setStorageReady] = useState(false),
+    [draftReady, setDraftReady] = useState(false),
     [form, setForm] = useState({
       title: "",
       description: "",
@@ -489,6 +492,30 @@ export default function Home() {
     if (!storageReady || hasLocalApi()) return;
     window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(cases));
   }, [cases, storageReady]);
+  useEffect(() => {
+    try {
+      const storedDraft = window.localStorage.getItem(DEMO_DRAFT_KEY);
+      if (storedDraft) {
+        const parsedDraft = JSON.parse(storedDraft);
+        if (parsedDraft && typeof parsedDraft === "object") {
+          setForm((current) => ({ ...current, ...parsedDraft }));
+        }
+      }
+    } catch {
+      setNotice("Het intakeconcept kon niet worden hersteld.");
+    } finally {
+      setDraftReady(true);
+    }
+  }, []);
+  useEffect(() => {
+    if (!draftReady) return;
+    const hasDraft = Object.values(form).some((value) => value.trim().length > 0);
+    if (hasDraft) {
+      window.localStorage.setItem(DEMO_DRAFT_KEY, JSON.stringify(form));
+    } else {
+      window.localStorage.removeItem(DEMO_DRAFT_KEY);
+    }
+  }, [draftReady, form]);
   const selected = cases.find((c) => c.id === selectedId) || cases[0],
     filtered = useMemo(
       () =>
@@ -508,6 +535,7 @@ export default function Home() {
     },
     resetDemo = () => {
       if (!hasLocalApi()) window.localStorage.removeItem(DEMO_STORAGE_KEY);
+      window.localStorage.removeItem(DEMO_DRAFT_KEY);
       setCases(casesSeed);
       setSelectedId("LH-1042");
       setRole("customer");
@@ -969,8 +997,9 @@ export default function Home() {
         </div>
         <nav>
           <button onClick={() => setView("home")}>Overzicht</button>
-          <button onClick={() => setView("jobboard")}>Opdrachten</button>
-          <button onClick={() => setView("admin")}>Controle</button>
+          {role === "customer" && <button onClick={() => setView("dashboard")}>Mijn casussen</button>}
+          {role === "advisor" && <button onClick={() => setView("jobboard")}>Opdrachten</button>}
+          {role === "admin" && <button onClick={() => setView("admin")}>Controle</button>}
           <button onClick={() => setView("businesscase")}>Businesscase</button>
         </nav>
         <div className="role-switch">
@@ -999,9 +1028,17 @@ export default function Home() {
       {view === "home" && (
         <HomeView
           onIntake={() => setView("intake")}
+          onDashboard={() => setView("dashboard")}
           onBoard={() => changeRole("advisor")}
           open={open}
           cases={cases}
+        />
+      )}{" "}
+      {view === "dashboard" && role === "customer" && (
+        <CustomerDashboard
+          cases={cases}
+          open={open}
+          onIntake={() => setView("intake")}
         />
       )}{" "}
       {view === "intake" && (
@@ -1442,7 +1479,7 @@ function DemoFlow({
         ? 0
         : view === "intake" || view === "structured"
           ? 0
-          : view === "case"
+          : view === "dashboard" || view === "case"
             ? 1
             : 0
       : role === "advisor"
@@ -1477,14 +1514,114 @@ function DemoFlow({
   );
 }
 
+const customerStatusGroups: Array<{ key: string; label: string; statuses: Status[] }> = [
+  { key: "draft", label: "Concept", statuses: ["PENDING_REVIEW"] },
+  { key: "waiting", label: "Wacht op adviseur", statuses: ["PUBLISHED"] },
+  { key: "found", label: "Adviseur gevonden", statuses: ["CLAIMED"] },
+  { key: "payment", label: "Betaling nodig", statuses: ["AWAITING_PAYMENT", "AWAITING_INFORMATION_PAYMENT"] },
+  { key: "review", label: "In behandeling", statuses: ["PAID", "IN_REVIEW", "NEEDS_INFORMATION"] },
+  { key: "answered", label: "Antwoord beschikbaar", statuses: ["DELIVERED"] },
+];
+
+function customerStatusLabel(status: Status) {
+  return (
+    customerStatusGroups.find((group) => group.statuses.includes(status))?.label ||
+    status.replaceAll("_", " ")
+  );
+}
+
+function nextStepForCase(item: CaseItem) {
+  switch (item.status) {
+    case "PENDING_REVIEW":
+      return "Controleer de anonimisering en wacht op publicatie.";
+    case "PUBLISHED":
+      return "Een passende adviseur kan deze casus claimen.";
+    case "CLAIMED":
+      return "Bekijk de geïnteresseerde adviseur en maak een keuze.";
+    case "AWAITING_PAYMENT":
+      return "Voer de mockbetaling uit om de beoordeling te starten.";
+    case "NEEDS_INFORMATION":
+      return "Beantwoord de noodzakelijke vraag van de adviseur.";
+    case "AWAITING_INFORMATION_PAYMENT":
+      return "Bevestig de noodzakelijke toeslag en voer de mockbetaling uit.";
+    case "PAID":
+    case "IN_REVIEW":
+      return "De adviseur controleert de analyse en bronnen.";
+    case "DELIVERED":
+      return "Uw gecontroleerde antwoord staat klaar.";
+    default:
+      return "De casus wordt verwerkt.";
+  }
+}
+
+function CustomerDashboard({ cases, open, onIntake }: { cases: CaseItem[]; open: (id: string) => void; onIntake: () => void }) {
+  const actionCases = cases.filter((item) =>
+    ["CLAIMED", "AWAITING_PAYMENT", "NEEDS_INFORMATION", "AWAITING_INFORMATION_PAYMENT", "DELIVERED"].includes(item.status),
+  );
+  return (
+    <section className="page customer-dashboard">
+      <div className="page-head dashboard-head">
+        <div>
+          <p className="eyebrow">KLANT / MIJN CASUSSEN</p>
+          <h1>Overzicht zonder zoeken.</h1>
+          <p>Zie per casus wat er is gebeurd, wat er nu nodig is en wat de volgende stap wordt.</p>
+        </div>
+        <button className="button primary" onClick={onIntake}>Nieuwe casus <Icon n="arrow" /></button>
+      </div>
+      {actionCases.length > 0 && (
+        <div className="customer-alert">
+          <Icon n="bell" />
+          <div>
+            <strong>{actionCases.length} casus{actionCases.length === 1 ? " vraagt" : "sen vragen"} uw aandacht</strong>
+            <span>Open een casus om de volgende stap uit te voeren.</span>
+          </div>
+        </div>
+      )}
+      <div className="dashboard-list">
+        {customerStatusGroups.map((group) => {
+          const groupedCases = cases.filter((item) => group.statuses.includes(item.status));
+          if (groupedCases.length === 0) return null;
+          return (
+            <section className="dashboard-group" key={group.key}>
+              <div className="dashboard-group-head">
+                <h2>{group.label}</h2>
+                <span>{groupedCases.length}</span>
+              </div>
+              {groupedCases.map((item) => (
+                <button className="dashboard-case" key={item.id} onClick={() => open(item.id)}>
+                  <span className={`status ${item.status.toLowerCase()}`}>{customerStatusLabel(item.status)}</span>
+                  <span className="dashboard-case-copy">
+                    <strong>{item.title}</strong>
+                    <small>{nextStepForCase(item)}</small>
+                  </span>
+                  <span className="dashboard-case-meta">{item.category} · {item.year}<Icon n="arrow" /></span>
+                </button>
+              ))}
+            </section>
+          );
+        })}
+        {cases.length === 0 && (
+          <div className="empty-state">
+            <strong>Nog geen casussen</strong>
+            <span>Begin met uw eerste vraag. U kunt ook een rommelig verhaal of bestaand AI-antwoord plaatsen.</span>
+            <button className="button primary compact" onClick={onIntake}>Casus indienen</button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function HomeView({
   onIntake,
   onBoard,
+  onDashboard,
   open,
   cases,
 }: {
   onIntake: () => void;
   onBoard: () => void;
+  onDashboard: () => void;
   open: (id: string) => void;
   cases: CaseItem[];
 }) {
@@ -1503,6 +1640,9 @@ function HomeView({
           <div className="actions">
             <button className="button primary" onClick={onIntake}>
               Stel je fiscale vraag <Icon n="arrow" />
+            </button>
+            <button className="button secondary" onClick={onDashboard}>
+              Mijn casussen
             </button>
             <button className="button secondary" onClick={onBoard}>
               Bekijk opdrachten als adviseur
@@ -1884,6 +2024,7 @@ function Intake({
           <div>
             <strong>Even zien hoe dit werkt?</strong>
             <span>Vul een realistische fictieve casus in en pas daarna zelf aan.</span>
+            <small className="draft-status"><Icon n="check" /> Uw concept wordt automatisch bewaard in deze browser.</small>
           </div>
           <ExampleButton onClick={fillExample} />
         </div>
@@ -2459,6 +2600,11 @@ function CaseDetail({
               </div>
             </div>
           )}
+          <div className="next-step-panel">
+            <p className="eyebrow">WAT GEBEURT ER NU?</p>
+            <strong>{nextStepForCase(item)}</strong>
+            <span>De statusgeschiedenis hieronder laat zien wat al is afgerond.</span>
+          </div>
           <div className="timeline">
             <p className="eyebrow">STATUSGESCHIEDENIS</p>
             {item.history.map((h, i) => (
