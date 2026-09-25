@@ -2797,17 +2797,23 @@ function CaseDetail({
             )}
             {customer && item.status === "CLAIMED" && item.claims?.length ? (
               <div className="claim-list">
-                <p className="eyebrow">ADVISEURS MET INTERESSE</p>
-                {item.claims.map((claim) => (
-                  <div className="claim-card" key={claim.id}>
+                <p className="eyebrow">SPECIALIST VOOR DEZE VRAAG</p>
+                <p className="claim-intro">Wij tonen eerst de beste inhoudelijke match. Alleen als er een reëel alternatief is, staat dat eronder.</p>
+                {[...item.claims]
+                  .sort((left, right) => right.match_score - left.match_score)
+                  .slice(0, 3)
+                  .map((claim, index) => (
+                  <div className={`claim-card${index === 0 ? " recommended-claim" : ""}`} key={claim.id}>
+                    <span className="claim-rank">{index === 0 ? "AANBEVOLEN" : `ALTERNATIEF ${index}`}</span>
                     <b>{claim.expert_name}</b>
                     <span>
                       {claim.expert_specialisation} · {claim.expert_rating.toFixed(1)}★ · {claim.match_score}% match
                     </span>
                     <small>{claim.message || "Beschikbaar voor deze casus."}</small>
+                    <small className="verification-note"><Icon n="shield" /> Demo-profiel — identiteit, vakbekwaamheid en verzekering moeten vóór productie zijn geverifieerd.</small>
                     {claim.status === "PENDING_CUSTOMER" && (
                       <button className="button secondary full" onClick={() => choose(item.id, claim.id)}>
-                        Kies deze adviseur
+                        {index === 0 ? "Kies aanbevolen specialist" : "Kies dit alternatief"}
                       </button>
                     )}
                   </div>
