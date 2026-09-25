@@ -1036,6 +1036,7 @@ export default function Home() {
         <Intake
           form={form}
           setForm={setForm}
+          publicDemo={!hasLocalApi()}
           onSubmit={submit}
           onCancel={() => setView("home")}
         />
@@ -2096,11 +2097,13 @@ function formatFileSize(bytes: number) {
 function Intake({
   form,
   setForm,
+  publicDemo,
   onSubmit,
   onCancel,
 }: {
   form: IntakeForm;
   setForm: (v: IntakeForm) => void;
+  publicDemo: boolean;
   onSubmit: (e: React.FormEvent, attachments: UploadedAttachment[]) => void;
   onCancel: () => void;
 }) {
@@ -2108,7 +2111,12 @@ function Intake({
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [fileError, setFileError] = useState("");
-  const set = (k: keyof IntakeForm, v: string) => setForm({ ...form, [k]: v });
+  const [demoAcknowledged, setDemoAcknowledged] = useState(false);
+  const [demoInputError, setDemoInputError] = useState("");
+  const set = (k: keyof IntakeForm, v: string) => {
+    setForm({ ...form, [k]: v });
+    setDemoInputError("");
+  };
   const addFiles = (files: FileList | File[]) => {
     const nextFiles = Array.from(files);
     const allowed = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/png", "image/jpeg"];
@@ -2122,6 +2130,33 @@ function Intake({
       ...current,
       ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, size: file.size, type: file.type })),
     ].filter((file, index, all) => all.findIndex((candidate) => candidate.id === file.id) === index).slice(0, 5));
+  };
+  const handleSubmit = (event: React.FormEvent) => {
+    if (publicDemo) {
+      const inputForSafetyCheck = [
+        form.title,
+        form.description,
+        form.question,
+        form.externalAi,
+        ...attachments.map((file) => file.name),
+      ].join("\n");
+      const findings = findSensitiveData(inputForSafetyCheck);
+      if (!demoAcknowledged) {
+        event.preventDefault();
+        setDemoInputError("Bevestig eerst dat u uitsluitend fictieve gegevens gebruikt.");
+        return;
+      }
+      if (findings.length > 0) {
+        event.preventDefault();
+        setDemoInputError(
+          `Deze publieke demo verwerkt geen herkenbare gegevens. Controleer: ${findings
+            .map((finding) => finding.label.toLowerCase())
+            .join(", ")}.`,
+        );
+        return;
+      }
+    }
+    onSubmit(event, attachments);
   };
   const fillExample = () =>
     setForm({
@@ -2152,7 +2187,7 @@ function Intake({
           Annuleren
         </button>
       </div>
-      <form className="form" onSubmit={(event) => onSubmit(event, attachments)}>
+      <form className="form" onSubmit={handleSubmit}>
         <div className="example-callout">
           <div>
             <strong>Even zien hoe dit werkt?</strong>
@@ -2291,11 +2326,33 @@ function Intake({
             </span>
           </div>
         </div>
+        {publicDemo && (
+          <label className="demo-consent">
+            <input
+              type="checkbox"
+              checked={demoAcknowledged}
+              onChange={(event) => {
+                setDemoAcknowledged(event.target.checked);
+                setDemoInputError("");
+              }}
+            />
+            <span>
+              Ik begrijp dat dit een publieke demo is en gebruik uitsluitend fictieve
+              gegevens en voorbeeldbestanden.
+            </span>
+          </label>
+        )}
+        {demoInputError && (
+          <div className="demo-input-error" role="alert">
+            <Icon n="shield" />
+            <span>{demoInputError}</span>
+          </div>
+        )}
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={onCancel}>
             Terug
           </button>
-          <button className="button primary" type="submit">
+          <button className="button primary" type="submit" disabled={publicDemo && !demoAcknowledged}>
             Gratis routecheck maken <Icon n="arrow" />
           </button>
         </div>

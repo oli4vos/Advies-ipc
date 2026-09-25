@@ -21,6 +21,8 @@ Elke push naar `main` start `.github/workflows/deploy-pages.yml`. Die workflow:
 
 De publieke site demonstreert de MKB-eerst klantreis: vrije belastingvraag, gratis routecheck, privacybevestiging, vaste demoprijs, expertsuggestie, mockbetaling en gecontroleerd eindantwoord. De adviseur-, beheer- en investeerdersomgevingen zijn via de demorol of footer bereikbaar, maar staan buiten de primaire klantnavigatie.
 
+De publieke intake heeft bewust een fictieve-data-gate. De bezoeker moet bevestigen uitsluitend fictieve gegevens te gebruiken en bekende persoonsgegevens worden vóór browseropslag geblokkeerd. Dit maakt de demo deelbaar als demonstratie, maar vervangt geen productiebeveiliging of volledige PII-detectie. De lokale FastAPI-route blijft de plek waar de echte anonimiseerworkflow kan worden getest.
+
 ## Lokaal ontwikkelen
 
 ```bash
