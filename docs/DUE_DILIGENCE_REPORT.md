@@ -238,6 +238,23 @@ De lokale UI bevatte bij de smoke-test acht zichtbare casussen: serverpersistent
 3. Blokkeer definitieve conclusies zonder bron of expliciete onzekerheidsstatus.
 4. Splits de frontend in featurecomponenten en maak demo-state resetbaar/deterministisch.
 
+## Addendum — production boundary (25 september 2026)
+
+De eerste technische productiestap is uitgevoerd in een afzonderlijke commit.
+De backend heeft nu een fail-closed productieconfiguratie, OIDC-JWT-adapter,
+identity-provider subject-koppeling, trusted hosts, security headers,
+requestlimiet, `/health`/`/ready` en een gecontroleerde migratie `0006`.
+De volledige resterende gate staat in
+[PRODUCTION-READINESS.md](./PRODUCTION-READINESS.md).
+
+Dit verandert de hoofdconclusie van deze due diligence niet: de GitHub
+Pages-site blijft een publieke fictieve demo. Er is nog geen autorisatieprovider,
+private documentopslag, payment-ledger, expertverificatie, juridische basis of
+operationele monitoring geactiveerd. Daarom mogen nu nog geen echte fiscale
+casussen, persoonsgegevens of betalingen worden verwerkt. De nieuwe code
+voorkomt dat een verkeerd ingestelde backend deze demo-onderdelen als productie
+presenteert; hij vervangt de nog benodigde externe inrichting niet.
+
 ## Go/no-go
 
 | Gebruikssituatie | Oordeel |

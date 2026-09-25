@@ -52,6 +52,39 @@ toegang geeft tot alle casussen. Gebruik uitsluitend lokaal:
 - `Bearer demo-advisor` voor de adviseurdemo;
 - `Bearer demo-admin` voor beheerderscontrole.
 
-De API weigert deze demo-identiteiten buiten `local`, `test` of `demo`. Een
-productie-identiteitsprovider moet deze adapter vervangen voordat een server
-extern beschikbaar komt.
+De API weigert deze demo-identiteiten buiten `local`, `test` of `demo`. In
+`staging` en `production` accepteert de API uitsluitend een geverifieerde
+OIDC-JWT. De runtime weigert productie-start wanneer PostgreSQL, expliciete
+CORS/hosts, private opslag of de OIDC-parameters ontbreken.
+
+## Productieconfiguratie
+
+Gebruik de `FISCALE_`-variabelen uit de onderstaande lijst. Waarden zijn
+provider-specifiek en mogen niet in Git worden opgeslagen:
+
+```text
+FISCALE_APP_ENV=production
+FISCALE_DATABASE_URL=postgresql+psycopg://...
+FISCALE_CORS_ORIGINS=https://app.example.nl
+FISCALE_ALLOWED_HOSTS=api.example.nl
+FISCALE_AUTH_MODE=oidc
+FISCALE_AUTH_JWKS_URL=https://identity.example/.well-known/jwks.json
+FISCALE_AUTH_ISSUER=https://identity.example/
+FISCALE_AUTH_AUDIENCE=fiscale-lijn-api
+FISCALE_STORAGE_MODE=private
+```
+
+Controleer na migratie:
+
+```bash
+alembic upgrade head
+alembic check
+curl -fsS https://api.example.nl/health
+curl -fsS https://api.example.nl/ready
+```
+
+`/health` meldt alleen procesgezondheid; `/ready` controleert ook de database.
+De OpenAPI-documentatie staat in staging en productie bewust uit. Voeg vóór
+een betaalde pilot nog private object storage, rate limiting/WAF, monitoring,
+identity-provider policy, expertverificatie, juridische voorwaarden en een
+payment-ledger toe. GitHub Pages blijft uitsluitend de publieke fictieve demo.
