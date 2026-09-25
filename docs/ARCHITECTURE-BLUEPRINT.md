@@ -1,7 +1,7 @@
 # Architectuurblauwdruk — Fiscaal adviesplatform
 
 Status: richtinggevend ontwerp  
-Versie: 1.5
+Versie: 1.6
 Datum: 25 september 2026
 
 ## 1. Doel van dit document
@@ -99,6 +99,16 @@ Dit model moet vóór een pilot worden gevalideerd door een Nederlandse jurist e
 12. **Demo en productie zijn verschillende risicoklassen**
     GitHub Pages is uitsluitend een publieke productdemo.
 
+13. **Gelaagde integratie met centrale aanroepen**
+    Schermen bevatten presentatie, navigatie en gebruikersintenties. Hooks
+    orkestreren workspace-state en workflows. `frontend/app/lib/api.ts` is de
+    centrale grens voor HTTP, authenticatie en provider-aanroepen. Mappers
+    vertalen API-records naar schermmodellen. Demo-fallback en lokale
+    servermodus worden alleen op deze grens gekozen; schermen mogen geen eigen
+    `fetch`, auth-headers, API-mapping of providerlogica bevatten. Hierdoor kan
+    authenticatie, API-versie, AI-provider of opslag worden vervangen zonder
+    iedere route opnieuw te herschrijven.
+
 ## 4. Systeemlandschap
 
 ```mermaid
@@ -136,6 +146,24 @@ flowchart LR
 - Database bewaart domeindata en append-only historie.
 - Documenten staan privé in objectopslag; nooit in een publieke map.
 - Externe diensten zijn via adapters vervangbaar.
+
+### Frontendlagen in de lokale MVP
+
+```text
+Page/component
+  → useCaseWorkspace (workflow en server-authoritative state)
+    → app/lib/api.ts (HTTP, demo-identiteit en foutgrens)
+      → FastAPI REST API
+    ← app/lib/case-mapper.ts (API-record naar schermmodel)
+  ← component props (presentatie)
+```
+
+De publieke GitHub Pages-export gebruikt dezelfde schermen maar activeert de
+browser-demo-adapter wanneer er geen lokale API beschikbaar is. Conceptteksten
+mogen lokaal worden bewaard; casussen, claims, betalingen, reviews en
+statusovergangen worden in lokale API-modus na iedere mutatie opnieuw vanaf de
+backend geladen. Deze grens moet behouden blijven bij iedere grondige
+platformwijziging.
 
 ## 5. Rollen en autorisatie
 

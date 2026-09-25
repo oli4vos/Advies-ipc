@@ -16,3 +16,8 @@ Frontend-specific rules:
 - The GitHub Pages export is a fictional demo; do not imply secure uploads, authentication, live tax sources or real payments.
 - Preserve keyboard focus, reduced-motion support, responsive behaviour and the customer/advisor/admin separation.
 - Do not introduce Next.js API routes for business logic; use the Python FastAPI backend through `app/lib/api.ts`.
+- Keep the frontend layered: page components own presentation and navigation;
+  hooks own orchestration and server-authoritative workspace state;
+  `app/lib/api.ts` owns HTTP/auth/provider calls; `app/lib/*-mapper.ts` owns
+  API-to-screen translation. Do not duplicate fetches, auth headers, case
+  mapping or demo/API branching inside screens.

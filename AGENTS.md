@@ -46,6 +46,11 @@ The public customer experience must not expose marketplace mechanics. The adviso
 - GitHub Pages is a static, fictional product demo only. It may use browser storage for continuity but must never accept real dossiers.
 - The local app can connect to the FastAPI API. Production requires real authentication, PostgreSQL, private document storage, payment webhooks and EU-oriented deployment.
 - Critical state transitions are server-authoritative and audited.
+- Frontend changes are layered: screens render and emit user intents, hooks
+  orchestrate workspace state and workflows, `app/lib/api.ts` owns HTTP/auth
+  calls, and mappers translate API records into screen models. Do not add
+  direct `fetch` calls, provider-specific logic or duplicated case mapping to
+  page components. Keep the GitHub Pages fallback behind the same boundary.
 
 ## Working rules
 
@@ -55,6 +60,9 @@ The public customer experience must not expose marketplace mechanics. The adviso
 - Never commit secrets, real personal data or real tax files.
 - Update `docs/PRODUCT-STRATEGY.md` and the architecture blueprint when a decision changes product positioning, responsibility, pricing, workflow, data provenance or deployment.
 - Do not present demo-only controls or mock data as production-ready functionality.
+- When a workflow or provider changes, update the central adapter/hook and its
+  tests first so all screens adapt consistently. Record material layering or
+  source-of-truth decisions in the architecture blueprint.
 
 ## Current public URLs
 
