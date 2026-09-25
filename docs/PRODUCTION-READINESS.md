@@ -24,6 +24,9 @@ wat nog nodig is voordat een beperkte betaalde pilot kan starten.
 - De bestaande audit- en statuslaag blijft onderdeel van de domeinflow.
 - De publieke GitHub Pages-site blijft een fictieve, client-side demo met een
   expliciete fictieve-data-gate; hij is geen productiefrontend.
+- `server/` is de canonieke FastAPI-backend voor deze repository. Losse,
+  niet-getrackte backend/deploymentconcepten in de werkmap zijn niet gevalideerd
+  en mogen niet als productiepad worden geactiveerd zonder aparte review.
 
 ## Nog verplicht vóór echte klantdata
 

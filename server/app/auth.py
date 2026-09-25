@@ -95,9 +95,13 @@ def _oidc_actor(session: Session, token: str) -> Actor:
 
     subject = str(claims["sub"])
     app_metadata = claims.get("app_metadata")
-    role = claims.get("role")
-    if not role and isinstance(app_metadata, dict):
+    # Roles must come from an identity-provider-managed claim, never from a
+    # user-editable profile claim. Providers should map their trusted role
+    # claim into app_metadata.role or this namespaced claim.
+    role = None
+    if isinstance(app_metadata, dict):
         role = app_metadata.get("role")
+    role = role or claims.get("https://fiscale-lijn.nl/role")
     if role not in {"CUSTOMER", "ADVISOR", "ADMIN"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

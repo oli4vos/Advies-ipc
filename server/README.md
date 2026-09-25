@@ -57,6 +57,10 @@ De API weigert deze demo-identiteiten buiten `local`, `test` of `demo`. In
 OIDC-JWT. De runtime weigert productie-start wanneer PostgreSQL, expliciete
 CORS/hosts, private opslag of de OIDC-parameters ontbreken.
 
+De identity provider moet de platformrol als beheerde claim aanleveren via
+`app_metadata.role` of de namespaced claim
+`https://fiscale-lijn.nl/role`; een gewone profielclaim is niet vertrouwd.
+
 ## Productieconfiguratie
 
 Gebruik de `FISCALE_`-variabelen uit de onderstaande lijst. Waarden zijn
