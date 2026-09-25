@@ -29,3 +29,18 @@ def test_anonymises_a_named_employee_without_consuming_the_sentence() -> None:
     assert "werkt bij" in result.text
     assert result.text.startswith("Mijn fictieve medewerker [PERSOON] werkt bij")
     assert result.entity_counts["PERSON"] == 1
+
+
+def test_anonymises_free_form_name_and_company_markers() -> None:
+    result = anonymise(
+        "Ik heet Sophie Jansen. Mijn bedrijfsnaam is Noordster Advies BV. "
+        "De contactpersoon: Peter de Wit belt later terug."
+    )
+
+    assert "Sophie Jansen" not in result.text
+    assert "Noordster Advies BV" not in result.text
+    assert "Peter de Wit" not in result.text
+    assert "[PERSOON]" in result.text
+    assert "[BEDRIJF]" in result.text
+    assert result.entity_counts["PERSON"] == 2
+    assert result.entity_counts["COMPANY"] == 1

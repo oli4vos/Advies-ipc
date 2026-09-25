@@ -49,8 +49,8 @@ PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "PERSON",
         re.compile(
-            r"(?P<prefix>(?i:\b(?:mijn naam is|de heer|mevrouw|"
-            r"mijn (?:fictieve )?medewerker|werknemer(?: genaamd)?|contactpersoon)\s+))"
+            r"(?P<prefix>(?i:\b(?:mijn naam is|ik heet|naam\s*[:=]|de heer|mevrouw|"
+            r"mijn (?:fictieve )?medewerker|werknemer(?: genaamd)?|contactpersoon\s*[:=]?)\s*))"
             r"(?P<value>[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+"
             r"(?:\s+(?:(?:de|den|der|van|von|te|ten|ter)\s+){0,2}"
             r"[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+){0,3})"
@@ -60,7 +60,8 @@ PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "COMPANY",
         re.compile(
-            r"(?i)(?P<prefix>\b(?:bedrijfsnaam|werkgever)\s*[:=])"
+            r"(?i)(?P<prefix>\b(?:bedrijfsnaam|werkgever)\s*[:=]|"
+            r"(?:mijn )?bedrijfsnaam\s+is\s+|(?:mijn )?bedrijf\s+heet\s+)"
             r"(?P<value>(?!\s*\[[^\]]+\])\s*[^\n,.;]{2,100})"
         ),
         "[BEDRIJF]",

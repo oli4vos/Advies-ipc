@@ -21,6 +21,7 @@ import {
   setDemoRole,
   submitReview,
 } from "./lib/api";
+import { anonymiseText, findSensitiveData } from "./lib/anonymisation";
 
 type Role = "customer" | "advisor" | "admin";
 type Status =
@@ -54,6 +55,8 @@ type CaseItem = {
   customerQuestion: string;
   aiAnswer: string;
   externalAi?: string;
+  anonymizedCustomerQuestion?: string;
+  anonymizedExternalAi?: string;
   attachments?: UploadedAttachment[];
   source: string;
   sourceType: string;
@@ -394,8 +397,10 @@ function apiCaseToItem(item: ApiCase): CaseItem {
           : 70,
     status: item.status as Status,
     customerQuestion: item.concrete_question,
+    anonymizedCustomerQuestion: item.concrete_question,
     aiAnswer: item.ai_answer,
     externalAi: item.external_ai_answer || undefined,
+    anonymizedExternalAi: item.external_ai_answer || undefined,
     source: source?.citation || source?.title || "Nog geen bron gekoppeld",
     sourceType: source?.source_type || "Niet geverifieerd",
     claims: item.claims,
@@ -415,44 +420,6 @@ function apiCaseToItem(item: ApiCase): CaseItem {
         }).format(new Date(entry.created_at)),
       })),
   };
-}
-
-function demoAnonymise(text: string) {
-  return text
-    .replace(/\b[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:straat|laan|weg|plein|gracht|kade|singel)\s+\d{1,5}[a-zA-Z]?\b/g, "[ADRES]")
-    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[E-MAIL]")
-    .replace(/\b(?:06|\+31)[ -]?\d(?:[ -]?\d){8}\b/g, "[TELEFOONNUMMER]")
-    .replace(/\b\d{4}\s?[A-Z]{2}\b/gi, "[POSTCODE]")
-    .replace(/\bBSN\s*[:=]?\s*\d{8,9}\b/gi, "BSN [BSN VERWIJDERD]")
-    .replace(/\bKVK\s*[:=]?\s*\d{8}\b/gi, "KvK [KVK VERWIJDERD]")
-    .replace(/\b(?:mijn naam is|de heer|mevrouw)\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:\s+[A-ZÀ-ÖØ-Ý][a-zà-öøÿ'’-]+){0,2}/gi, "[PERSOON]")
-    .replace(/\bwerkgever\s*[:=]\s*[^,.\n]+/gi, "werkgever: [WERKGEVER]");
-}
-
-type SensitiveFinding = { label: string; value: string; index: number };
-
-const sensitivePatterns: Array<[string, RegExp]> = [
-  ["E-mailadres", /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi],
-  ["IBAN", /\bNL\d{2}(?:\s?[A-Z]{4})(?:\s?\d{4}){2}\s?\d{2}\b/gi],
-  ["Telefoonnummer", /(?<!\w)(?:\+31|0031|0)[ -]?(?:\d[ -]?){8,9}(?!\w)/g],
-  ["Postcode", /\b\d{4}\s?[A-Z]{2}\b/gi],
-  ["BSN", /\bBSN\s*[:=]?\s*\d{8,9}\b/gi],
-  ["KvK-nummer", /\bKVK\s*[:=]?\s*\d{8}\b/gi],
-  ["Adres", /\b[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:straat|laan|weg|plein|gracht|kade|singel)\s+\d{1,5}[a-zA-Z]?\b/g],
-  ["Naam", /\b(?:mijn naam is|de heer|mevrouw)\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+(?:\s+[A-ZÀ-ÖØ-Ý][a-zà-öø-ÿ'’-]+){0,2}/gi],
-  ["Gemarkeerde werkgever", /\bwerkgever\s*[:=]\s*(?!\[[^\]]+\])[^,.\n]+/gi],
-];
-
-function findSensitiveData(text: string): SensitiveFinding[] {
-  return sensitivePatterns
-    .flatMap(([label, pattern]) =>
-      Array.from(text.matchAll(new RegExp(pattern.source, pattern.flags))).map((match) => ({
-        label,
-        value: match[0],
-        index: match.index || 0,
-      })),
-    )
-    .sort((a, b) => a.index - b.index);
 }
 
 export default function Home() {
@@ -947,7 +914,7 @@ export default function Home() {
     }
     const n: CaseItem = {
       id: `DEMO-${Math.floor(Math.random() * 800 + 100)}`,
-      title: form.title || "Nieuwe belastingvraag",
+      title: anonymiseText(form.title) || "Nieuwe belastingvraag",
       category: form.category,
       tags:
         form.category === "Btw"
@@ -970,12 +937,17 @@ export default function Home() {
       match: 0,
       status: "PENDING_REVIEW",
       customerQuestion: form.question || "Wat moet ik nu doen en wat is mijn risico?",
+      anonymizedCustomerQuestion:
+        anonymiseText(form.question) || "Wat moet ik nu doen en wat is mijn risico?",
       aiAnswer:
         "Er is nog geen fiscaal conceptantwoord opgesteld. Eerst moet de structuur door de klant worden bevestigd en door een adviseur worden beoordeeld.",
       externalAi: form.externalAi || undefined,
+      anonymizedExternalAi: form.externalAi
+        ? anonymiseText(form.externalAi)
+        : undefined,
       attachments,
       originalDescription: form.description,
-      anonymizedDescription: demoAnonymise(form.description),
+      anonymizedDescription: anonymiseText(form.description),
       source: "Nog te bepalen",
       sourceType: "Niet geverifieerd",
       history: [{ label: "Casus ingediend", date: "Zojuist" }],
@@ -2550,7 +2522,7 @@ function CaseDetail({
             </div>
             <div className="question">
               <small>Concrete adviesvraag</small>
-              <p>{item.customerQuestion}</p>
+              <p>{customer ? item.customerQuestion : item.anonymizedCustomerQuestion || item.customerQuestion}</p>
             </div>
           </section>
           <section className="section-block">
@@ -2575,7 +2547,7 @@ function CaseDetail({
                 <div className="ai-label">
                   KLANTINPUT · AI-ANTWOORD UIT ANDERE BRON
                 </div>
-                <p>{item.externalAi}</p>
+                <p>{customer ? item.externalAi : item.anonymizedExternalAi || item.externalAi}</p>
                 <small>
                   Dit is door de klant aangeleverde input. Het platform neemt de
                   inhoud niet automatisch over.
@@ -2942,7 +2914,7 @@ function Review({
                 <span>KLANTINPUT</span>
                 <em>EXTERN AI-ANTWOORD</em>
               </div>
-              <p>{item.externalAi}</p>
+              <p>{item.anonymizedExternalAi || item.externalAi}</p>
               <small>
                 Controleer vooral aannames, bronverwijzingen en ontbrekende
                 feiten.
