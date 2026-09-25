@@ -4,6 +4,14 @@ Status: concept, niet gecommit
 Auditatum: 22 september 2026  
 Gecontroleerde commit: `891b49f` (`Add conditional fee gate for information requests`)
 
+> Historische momentopname. Dit rapport beschrijft commit `891b49f` en blijft bewaard als audittrail. Het is geen verklaring over de actuele `main`. Voor de huidige productrichting zie [PRODUCT-STRATEGY.md](./PRODUCT-STRATEGY.md) en voor de doelarchitectuur [ARCHITECTURE-BLUEPRINT.md](./ARCHITECTURE-BLUEPRINT.md).
+
+## Implementatie-update 25 september 2026
+
+Na deze audit zijn onder meer demo-identiteiten, rol- en eigendomscontroles, gescheiden klant-/adviseurresponses, extra privacygates, platformgoedkeuring voor noodzakelijke toeslagen, migraties `0004` en `0005`, uitgebreidere regressietests en een GitHub Actions-kwaliteitsworkflow toegevoegd. De publieke demo bewaart alleen fictieve status in browseropslag en markeert uploads, betalingen en AI als mock.
+
+De hoofdconclusie blijft ongewijzigd: **geen echte klantdossiers of betaalde pilot** totdat productie-authenticatie, private documentopslag, formele expertverificatie, juridisch gevalideerde voorwaarden/facturatie, providergebonden betalingen, monitoring en een nieuwe onafhankelijke security/privacy-audit gereed zijn. Demo-bearertokens en browseropslag zijn geen productiebeveiliging.
+
 ## Executive summary
 
 **Besluit: no-go voor echte klantdossiers, echte betalingen of een betaalde pilot.** De huidige versie is geschikt als publieke, volledig fictieve GitHub Pages-demo en als lokale ontwikkelprototype. Zij is niet geschikt om persoonsgegevens, fiscale dossiers of betalingsverplichtingen te verwerken.

@@ -1,8 +1,8 @@
 # Architectuurblauwdruk — Fiscaal adviesplatform
 
 Status: richtinggevend ontwerp  
-Versie: 1.3
-Datum: 22 september 2026
+Versie: 1.4
+Datum: 25 september 2026
 
 ## 1. Doel van dit document
 
@@ -16,23 +16,36 @@ De blauwdruk maakt steeds onderscheid tussen:
 
 De publieke demo mag nooit echte fiscale dossiers of persoonsgegevens verwerken.
 
+Productpositionering, doelgroep, klanttaal, dienstenladder en open commerciële beslissingen staan in [PRODUCT-STRATEGY.md](./PRODUCT-STRATEGY.md). Bij strijdigheid is dat document leidend voor productkeuzes en deze blauwdruk voor technische implementatie.
+
 ## 2. Productdefinitie
 
-Het platform is geen chatbot. Het is een gecontroleerde fiscale marketplace waarin:
+Het platform is geen chatbot. Het is belastinghulp met een marketplace aan de aanbodzijde. De eerste doelgroep is het Nederlandse mkb: eenmanszaken, bv's en werkgevers met een concrete, afgebakende belastingvraag. Btw/facturen en werkgevers-/loonvragen vormen de eerste wedge.
 
-1. een klant ongestructureerde informatie aanlevert;
-2. het platform de informatie structureert en anonimiseert;
-3. de klant de feitelijke structuur bevestigt;
-4. een opdracht op een jobboard wordt gepubliceerd;
-5. passende adviseurs een besloten aanbod doen;
-6. de klant uit maximaal drie aanbevolen adviseurs kiest;
-7. de gekozen adviseur de opdracht exclusief krijgt en de klant betaalt;
-8. de adviseur AI-output, bronnen en feiten controleert;
-9. de klant een menselijk gecontroleerd antwoord ontvangt.
+De klant ziet geen jobboardmechaniek en hoeft geen fiscale categorie te kennen. De primaire route is:
 
-De kernbelofte is: **rommelige klantinput wordt omgezet in een controleerbare fiscale casus, zonder te doen alsof AI zelfstandig fiscaal advies geeft.**
+1. de ondernemer deelt vrije tekst, documenten en eventueel een elders gegenereerd AI-antwoord;
+2. het platform structureert en anonimiseert de informatie;
+3. de klant bevestigt feiten en anonimisering;
+4. een gratis routecheck bepaalt of zelfservice/gratis hulp kan volstaan;
+5. als specialistische controle nodig is, wordt de vraag achter de schermen als opdracht gepubliceerd;
+6. passende adviseurs kunnen besloten interesse tonen;
+7. het platform adviseert standaard één topmatch en kan maximaal twee alternatieven tonen;
+8. de klant ziet scope, vaste totaalprijs exclusief btw en verantwoordelijkheid vóór betaling;
+9. de adviseur controleert AI-output, bronnen en feiten;
+10. de klant ontvangt een menselijk gecontroleerd, actiegericht antwoord.
 
-### 2.1 Juridisch en commercieel model
+De kernbelofte is: **een rommelige belastingvraag wordt een duidelijke route, vaste prijs en controleerbaar antwoord, zonder te doen alsof AI zelfstandig adviseert.**
+
+### 2.1 Dienstenladder en antwoordcontract
+
+- `ROUTE_CHECK`: gratis structurering, privacycontrole, ontbrekende informatie en vervolgrichting;
+- `BOUNDED_TAX_CHECK`: één afgebakende vraag, vaste prijs, passende specialist en één standaard verduidelijkingsronde;
+- `SPECIALIST_ADVICE`: hoger risico of bredere scope, met expliciete prijs en meerwerkakkoord.
+
+Een definitief antwoord bevat altijd: kort antwoord, betekenis voor de onderneming, actie nu, deadline, onzekerheden/ontbrekende feiten, bronnen en wanneer extra hulp nodig is.
+
+### 2.2 Juridisch en commercieel model
 
 Het gekozen uitgangspunt is dat het platform **bemiddelaar** is en geen verstrekker van het fiscale advies.
 
@@ -81,7 +94,7 @@ Dit model moet vóór een pilot worden gevalideerd door een Nederlandse jurist e
 11. **Herkomst vóór hergebruik**
    Elk inhoudelijk artefact legt vast of het afkomstig is van een klant, expert, externe AI, platform-AI, deterministische regel of externe bron. AI-output wordt nooit overschreven door menselijke correcties: beide versies en hun onderlinge relatie blijven afzonderlijk en reproduceerbaar bewaard. Operationele feedback wordt niet automatisch trainingsdata.
 
-11. **Demo en productie zijn verschillende risicoklassen**
+12. **Demo en productie zijn verschillende risicoklassen**
     GitHub Pages is uitsluitend een publieke productdemo.
 
 ## 4. Systeemlandschap
@@ -109,9 +122,9 @@ flowchart LR
 
 - De live GitHub Pages-site bevat een statische Next.js-export.
 - Rollen, casussen, betaling en review draaien daar in React client-state.
-- Data verdwijnt bij refresh.
+- De GitHub Pages-demo bewaart fictieve flowstatus in browseropslag zodat de demo na refresh doorgaat; dit is geen database of veilige dossieropslag.
 - Er is geen echte authenticatie, database, anonimisering of beveiligde opslag.
-- De bestaande FastAPI-code is nog niet gekoppeld aan de live frontend.
+- De frontend kan lokaal via een configuratiepunt met de FastAPI-code communiceren; de live Pages-export gebruikt bewust alleen fictieve browserdata.
 - De GitHub Pages-workflow publiceert alleen de frontend.
 
 ### Doelsituatie
@@ -224,7 +237,7 @@ Verantwoordelijk voor:
 - uitlegbare matchscore;
 - expertvoorkeuren;
 - besloten aanbiedingen van adviseurs;
-- selectie van maximaal drie passende kandidaten voor de klant;
+- selectie van één aanbevolen topmatch en alleen waar zinvol maximaal twee alternatieven;
 - geverifieerde reviews uit betaalde en afgeronde opdrachten;
 - klantselectie en exclusieve toewijzing;
 - reactietermijnen, aanbodverloop en betaal-time-outs.
@@ -839,7 +852,7 @@ stateDiagram-v2
 - Statusovergangen gebeuren via domeincommands, niet via een generieke `PATCH status`.
 - Elke overgang heeft actor, reden, timestamp en toegestane vorige status.
 - Meerdere adviseurs mogen besloten aanbiedingen doen zolang de casus `PUBLISHED` is.
-- De klant ziet maximaal drie door matching en minimumkwaliteit geselecteerde kandidaten.
+- De klant ziet standaard één door matching en minimumkwaliteit geselecteerde topmatch, met uitlegbare reden. Maximaal twee alternatieven zijn optioneel.
 - De selectie van één aanbod en het aanmaken van de exclusieve assignment gebeuren atomair.
 - De assignment verloopt standaard na 24 uur zonder betaling; de klant kan daarna een ander aanbod kiezen.
 - Adviseurs zien elkaars aanbod niet en reviews zijn alleen geverifieerd na betaalde, afgeronde opdrachten.
@@ -943,10 +956,10 @@ De vergoeding wordt niet direct door de matchscore bepaald. Een aparte prijsrege
 
 ### 12.1 Besloten aanbod- en selectieflow
 
-1. De casus wordt gepubliceerd met een indicatieve prijsband en maximale reactietermijn.
+1. De casus wordt intern gepubliceerd met een indicatieve prijsband en maximale reactietermijn.
 2. Passende adviseurs kunnen één besloten aanbod doen met prijs, levertijd en korte motivatie.
-3. Het platform filtert op harde eisen en toont maximaal drie kandidaten.
-4. De klant vergelijkt specialisatie, geverifieerde reviews, voltooiingspercentage, levertijd en totaalprijs.
+3. Het platform filtert op harde eisen en adviseert één topmatch; maximaal twee alternatieven kunnen worden getoond.
+4. De klant ziet bij de aanbeveling specialisatie, verificatie, geverifieerde reviews, levertijd, scope en vaste totaalprijs exclusief btw.
 5. De klant selecteert één adviseur; dit maakt een exclusieve assignment.
 6. De klant krijgt 24 uur om te betalen.
 7. Bij tijdige betaling wordt de assignment actief; anders vervalt deze en kan de klant opnieuw kiezen.
@@ -1629,7 +1642,7 @@ Op termijn:
 - geen Node-backend en geen Supabase Edge Functions;
 - juridisch model: platform is bemiddelaar; klant en adviseur sluiten de adviesovereenkomst;
 - facturatie: platform genereert en verzendt namens adviseur, adviseur blijft leverancier;
-- besloten aanbiedingen met maximaal drie kandidaten, gevolgd door klantselectie;
+- besloten aanbiedingen; standaard één uitlegbare topmatch en optioneel maximaal twee alternatieven, gevolgd door klantselectie;
 - exclusieve assignment na selectie, standaard 24 uur betaaltermijn;
 - alleen geverifieerde reviews uit betaalde, afgeronde opdrachten;
 - SQLite lokaal, Supabase PostgreSQL in Frankfurt voor pilot/productie;
@@ -1650,13 +1663,17 @@ Op termijn:
 - GitHub Pages uitsluitend voor fictieve frontenddemo;
 - één logisch onderwerp per commit;
 - lean pilot zonder microservices, Kubernetes, Redis, vector database of realtime chat.
+- eerste doelgroep: Nederlands mkb; btw/facturen en werkgevers-/loonvragen als wedge;
+- klanttaal gebruikt belastinghulp, specialist en vaste prijs; jobboardtaal blijft aan de aanbodzijde;
+- gratis routecheck vóór een betaalde korte check of specialistisch advies;
+- vast eindantwoordcontract met antwoord, impact, actie, deadline, onzekerheid, bronnen en escalatiemoment.
 
 ### Nog te beslissen
 
 1. Welke minimumvoorwaarden gelden voor beroepsaansprakelijkheidsverzekering en vakbekwaamheid van adviseurs?
 2. Wie draagt welk risico bij refund, no-show, deadlineoverschrijding of een ondeugdelijk antwoord?
-3. Mag een klant altijd vrij kiezen uit drie kandidaten of mag één duidelijke topmatch direct worden voorgesteld?
-4. Welke minimum- en maximumprijzen gelden per complexiteitsklasse om prijsdumping te voorkomen?
+3. Welke signalen rechtvaardigen het tonen van één of twee alternatieven naast de standaard topmatch?
+4. Welke minimum- en maximumprijzen gelden per dienstenlaag en complexiteitsklasse om prijsdumping te voorkomen?
 5. Welke contractuele volmacht is nodig om facturen namens adviseurs op te stellen en te verzenden?
 6. Hoe worden correcties en creditnota's administratief afgehandeld?
 7. Welke fiscale bronnen mogen juridisch en commercieel worden ontsloten?
