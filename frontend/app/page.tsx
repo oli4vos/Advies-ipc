@@ -150,17 +150,17 @@ const pitchScenarios: Record<
 const casesSeed: CaseItem[] = [
   {
     id: "LH-1042",
-    title: "Werknemer met meerdere dienstbetrekkingen en loonheffingskorting",
+    title: "Werkgever ontdekt dubbele loonheffingskorting bij medewerker",
     category: "Loonheffingen",
     tags: ["meerdere dienstbetrekkingen", "loonheffingskorting"],
     summary:
-      "Een werknemer werkt sinds 2025 bij twee werkgevers. Er lijkt dubbel rekening te zijn gehouden met de loonheffingskorting. De klant wil weten welke actie nodig is.",
+      "Een mkb-werkgever ontdekt dat een nieuwe medewerker mogelijk bij twee werkgevers loonheffingskorting laat toepassen. De loonadministratie wil weten welke actie nodig is.",
     facts: [
-      "Particuliere werknemer met twee dienstbetrekkingen",
+      "Medewerker heeft twee dienstbetrekkingen",
       "Beide werkgevers passen vermoedelijk de loonheffingskorting toe",
       "Belastingjaar 2025",
     ],
-    clientType: "Particulier",
+    clientType: "Werkgever",
     year: "2025",
     complexity: "Gemiddeld",
     minutes: "20–30 min",
@@ -170,7 +170,7 @@ const casesSeed: CaseItem[] = [
     match: 86,
     status: "PUBLISHED",
     customerQuestion:
-      "Welke gevolgen heeft dit voor de aangifte en welke actie richting mijn werkgevers is nodig?",
+      "Wat moeten wij in onze loonadministratie aanpassen en wat moet de medewerker zelf doen?",
     aiAnswer:
       "De loonheffingskorting mag in beginsel bij één werkgever worden toegepast. Bij dubbele toepassing kan bij de aangifte moeten worden bijbetaald. Controleer de loonstroken en pas de korting bij één werkgever aan.",
     source: "Wet op de loonbelasting 1964, art. 23",
@@ -192,7 +192,7 @@ const casesSeed: CaseItem[] = [
       "Privégebruik onder 500 km wordt gesteld",
       "Rittenregistratie is niet volledig",
     ],
-    clientType: "Werknemer",
+    clientType: "Werkgever",
     year: "2025",
     complexity: "Gemiddeld",
     minutes: "30–45 min",
@@ -468,9 +468,9 @@ export default function Home() {
       title: "",
       description: "",
       question: "",
-      category: "Loonheffingen",
+      category: "Weet ik niet",
       year: "2025",
-      clientType: "Particulier",
+      clientType: "Eenmanszaak",
       externalAi: "",
     });
   const loadBackendCases = async (activeRole: Role) => {
@@ -647,7 +647,8 @@ export default function Home() {
     },
     claim = async (id: string, message = "Ik kan deze casus binnen één werkdag beoordelen en de broncontrole uitvoeren.") => {
       const current = cases.find((item) => item.id === id);
-      if (!current?.backendId) {
+      if (!current) return;
+      if (!current.backendId) {
         const demoClaim: ApiCase["claims"][number] = {
           id: `demo-claim-${id}`,
           expert_id: "demo-advisor",
@@ -738,7 +739,8 @@ export default function Home() {
     },
     pay = async (id: string) => {
       const current = cases.find((item) => item.id === id);
-      if (!current?.backendId) {
+      if (!current) return;
+      if (!current.backendId) {
         const hasInformationPayment = current.status === "AWAITING_INFORMATION_PAYMENT";
         update(
           id,
@@ -928,9 +930,9 @@ export default function Home() {
           title: "",
           description: "",
           question: "",
-          category: "Loonheffingen",
+          category: "Weet ik niet",
           year: "2025",
-          clientType: "Particulier",
+          clientType: "Eenmanszaak",
           externalAi: "",
         });
         return;
@@ -945,12 +947,14 @@ export default function Home() {
     }
     const n: CaseItem = {
       id: `DEMO-${Math.floor(Math.random() * 800 + 100)}`,
-      title: form.title || "Nieuwe fiscale casus",
+      title: form.title || "Nieuwe belastingvraag",
       category: form.category,
       tags:
         form.category === "Btw"
           ? ["btw", "controle nodig"]
-          : ["loonheffingen", "controle nodig"],
+          : form.category === "Personeel & loon"
+            ? ["loonheffingen", "controle nodig"]
+            : ["mkb", "triage nodig"],
       summary: (form.description || "Nieuwe casus ter beoordeling.").slice(
         0,
         490,
@@ -965,7 +969,7 @@ export default function Home() {
       missing: 1,
       match: 0,
       status: "PENDING_REVIEW",
-      customerQuestion: form.question || "Wat is de fiscale behandeling?",
+      customerQuestion: form.question || "Wat moet ik nu doen en wat is mijn risico?",
       aiAnswer:
         "Er is nog geen fiscaal conceptantwoord opgesteld. Eerst moet de structuur door de klant worden bevestigd en door een adviseur worden beoordeeld.",
       externalAi: form.externalAi || undefined,
@@ -986,23 +990,26 @@ export default function Home() {
       title: "",
       description: "",
       question: "",
-      category: "Loonheffingen",
+      category: "Weet ik niet",
       year: "2025",
-      clientType: "Particulier",
+      clientType: "Eenmanszaak",
       externalAi: "",
     });
   };
   return (
-    <main>
+    <main id="main-content">
       <div className="demo-guard">
         <Icon n="shield" />
-        <strong>
-          Publieke demo — geen echte persoonsgegevens of fiscale dossiers
-          invoeren.
-        </strong>
-        <span>
-          Demo-opslag in deze browser · geen veilige productieomgeving.
-        </span>
+        <strong>Publieke demo — voer geen echte bedrijfs- of persoonsgegevens in.</strong>
+        <span>Opslag in deze browser · geen beveiligde productieomgeving.</span>
+        <label className="demo-role-select">
+          <span>Bekijk demo als</span>
+          <select value={role} onChange={(e) => changeRole(e.target.value as Role)}>
+            <option value="customer">MKB-klant</option>
+            <option value="advisor">Adviseur</option>
+            <option value="admin">Beheerder</option>
+          </select>
+        </label>
         <button className="demo-reset" onClick={resetDemo}>
           Demo resetten
         </button>
@@ -1011,29 +1018,21 @@ export default function Home() {
         <div className="brand" onClick={() => setView("home")}>
           <span className="brand-mark">F</span>
           <span>fiscale lijn</span>
-          <small>publieke demo</small>
+          <small>belastinghulp voor mkb</small>
         </div>
         <nav>
-          <button onClick={() => setView("home")}>Overzicht</button>
-          {role === "customer" && <button onClick={() => setView("dashboard")}>Mijn casussen</button>}
+          <button onClick={() => setView("home")}>{role === "customer" ? "Start" : "Overzicht"}</button>
+          {role === "customer" && <button onClick={() => setView("dashboard")}>Mijn vragen</button>}
+          {role === "customer" && <button onClick={() => setView("intake")}>Vraag voorleggen</button>}
           {role === "advisor" && <button onClick={() => setView("jobboard")}>Opdrachten</button>}
           {role === "admin" && <button onClick={() => setView("admin")}>Controle</button>}
-          <button onClick={() => setView("businesscase")}>Businesscase</button>
         </nav>
-        <div className="role-switch">
-          <span>Demomodus</span>
-          <select
-            value={role}
-            onChange={(e) => changeRole(e.target.value as Role)}
-          >
-            <option value="customer">Klant</option>
-            <option value="advisor">Adviseur</option>
-            <option value="admin">Beheerder</option>
-          </select>
+        <button className="profile-shortcut" onClick={() => setView(role === "customer" ? "dashboard" : role === "advisor" ? "jobboard" : "admin")}>
           <span className="avatar">
             {role === "customer" ? "KD" : role === "advisor" ? "MV" : "BE"}
           </span>
-        </div>
+          <span>{role === "customer" ? "Mijn omgeving" : role === "advisor" ? "Adviseur" : "Beheer"}</span>
+        </button>
       </header>
       <DemoFlow role={role} view={view} onIntake={() => setView("intake")} onBoard={() => changeRole("advisor")} onAdmin={() => setView("admin")} />
       {notice && (
@@ -1047,7 +1046,9 @@ export default function Home() {
         <HomeView
           onIntake={() => setView("intake")}
           onDashboard={() => setView("dashboard")}
-          onBoard={() => changeRole("advisor")}
+          onAdvisor={() => changeRole("advisor")}
+          onInvestor={() => setView("businesscase")}
+          onPolicy={(policy) => setView(policy)}
           open={open}
           cases={cases}
         />
@@ -1124,6 +1125,9 @@ export default function Home() {
         />
       )}{" "}
       {view === "businesscase" && <BusinessCase />}
+      {view === "privacy" && <PolicyPage type="privacy" onBack={() => setView("home")} />}
+      {view === "terms" && <PolicyPage type="terms" onBack={() => setView("home")} />}
+      {view === "quality" && <PolicyPage type="quality" onBack={() => setView("home")} />}
     </main>
   );
 }
@@ -1154,20 +1158,20 @@ function BusinessCase() {
         <div className="pitch-copy">
           <p className="eyebrow">INVESTEERDERSCASE / MANAGEMENTAANNAMES</p>
           <h1>
-            Fiscale expertise,
+            Belastinghulp voor het mkb,
             <br />
-            <em>zonder intakefrictie.</em>
+            <em>zonder zwaar adviestraject.</em>
           </h1>
           <p className="pitch-thesis">
-            Fiscale Lijn verandert ongestructureerde belastingvragen in
-            geanonimiseerde, direct beoordeelbare opdrachten. AI doet de
-            vooranalyse; een passende fiscalist blijft verantwoordelijk voor het
-            gecontroleerde antwoord.
+            Fiscale Lijn begint bij concrete belastingvragen van kleine en
+            middelgrote ondernemingen. Het platform maakt rommelige input
+            beoordeelbaar; AI ondersteunt de vooranalyse en een passende
+            specialist blijft verantwoordelijk voor het eindantwoord.
           </p>
           <div className="pitch-tags">
             <span>Marketplace</span>
             <span>Human-in-the-loop</span>
-            <span>Loonheffingen + btw als wedge</span>
+            <span>MKB · btw + werkgeversvragen als wedge</span>
           </div>
         </div>
         <aside className="investment-ask">
@@ -1175,7 +1179,7 @@ function BusinessCase() {
           <strong>€250.000</strong>
           <p>
             18 maanden om aanbod, herhaalgebruik en unit economics in twee
-            fiscale niches te bewijzen.
+            MKB-vraagtypen te bewijzen.
           </p>
           <div className="funding-split">
             <span>
@@ -1202,9 +1206,9 @@ function BusinessCase() {
             rommelige input.
           </h2>
           <p>
-            Klanten weten niet welke feiten relevant zijn. Adviseurs moeten
+            Ondernemers weten niet welke feiten of belastingsoort relevant zijn. Adviseurs moeten
             eerst een dossier uitpluizen voordat zij prijs, risico en expertise
-            kunnen beoordelen. Daardoor zijn kleine fiscale vragen te traag en
+            kunnen beoordelen. Daardoor zijn afgebakende belastingvragen te traag en
             relatief duur.
           </p>
         </div>
@@ -1212,7 +1216,7 @@ function BusinessCase() {
           <div>
             <b>01</b>
             <span>
-              Klant deelt vrije tekst, documenten en eventueel een bestaand
+              De ondernemer deelt vrije tekst, documenten en eventueel een bestaand
               AI-antwoord.
             </span>
           </div>
@@ -1226,8 +1230,8 @@ function BusinessCase() {
           <div>
             <b>03</b>
             <span>
-              Geselecteerde adviseurs doen een gesloten aanbod; de klant kiest
-              op prijs, fit en reviews.
+              Het platform adviseert één passende specialist en toont scope,
+              vaste prijs en onderbouwing; alternatieven blijven mogelijk.
             </span>
           </div>
           <div>
@@ -1373,7 +1377,7 @@ function BusinessCase() {
               <b>12—24 maanden</b>
               <strong>Distributie bewijzen</strong>
               <span>
-                Werkgevers- en administratiekanalen openen; 750 casussen per
+                Boekhouders-, werkgevers- en softwarekanalen openen; 750 casussen per
                 maand.
               </span>
             </div>
@@ -1381,8 +1385,8 @@ function BusinessCase() {
               <b>24—36 maanden</b>
               <strong>Categorie uitbreiden</strong>
               <span>
-                Van loonheffingen en btw naar inkomstenbelasting en eigen
-                woning.
+                Van btw en werkgeversvragen naar winst, bv en internationaal
+                ondernemen; particuliere onderwerpen volgen pas later.
               </span>
             </div>
           </div>
@@ -1490,7 +1494,7 @@ function DemoFlow({
       ? ["Bekijk opdracht", "Claim casus", "Review antwoord"]
       : role === "admin"
         ? ["Controleer casus", "Publiceer", "Bewaak kwaliteit"]
-        : ["Dien casus in", "Kies adviseur", "Ontvang antwoord"];
+        : ["Deel uw vraag", "Kies specialist", "Ontvang advies"];
   const activeIndex =
     role === "customer"
       ? view === "home"
@@ -1581,10 +1585,10 @@ function CustomerDashboard({ cases, open, onIntake }: { cases: CaseItem[]; open:
       <div className="page-head dashboard-head">
         <div>
           <p className="eyebrow">KLANT / MIJN CASUSSEN</p>
-          <h1>Overzicht zonder zoeken.</h1>
-          <p>Zie per casus wat er is gebeurd, wat er nu nodig is en wat de volgende stap wordt.</p>
+          <h1>Uw belastingvragen op één plek.</h1>
+          <p>Zie per vraag wat er is gebeurd, wat er nu nodig is en wat de volgende stap wordt.</p>
         </div>
-        <button className="button primary" onClick={onIntake}>Nieuwe casus <Icon n="arrow" /></button>
+        <button className="button primary" onClick={onIntake}>Nieuwe vraag <Icon n="arrow" /></button>
       </div>
       {actionCases.length > 0 && (
         <div className="customer-alert">
@@ -1620,9 +1624,9 @@ function CustomerDashboard({ cases, open, onIntake }: { cases: CaseItem[]; open:
         })}
         {cases.length === 0 && (
           <div className="empty-state">
-            <strong>Nog geen casussen</strong>
+            <strong>Nog geen vragen</strong>
             <span>Begin met uw eerste vraag. U kunt ook een rommelig verhaal of bestaand AI-antwoord plaatsen.</span>
-            <button className="button primary compact" onClick={onIntake}>Casus indienen</button>
+            <button className="button primary compact" onClick={onIntake}>Vraag voorleggen</button>
           </div>
         )}
       </div>
@@ -1632,166 +1636,281 @@ function CustomerDashboard({ cases, open, onIntake }: { cases: CaseItem[]; open:
 
 function HomeView({
   onIntake,
-  onBoard,
+  onAdvisor,
+  onInvestor,
+  onPolicy,
   onDashboard,
   open,
   cases,
 }: {
   onIntake: () => void;
-  onBoard: () => void;
+  onAdvisor: () => void;
+  onInvestor: () => void;
+  onPolicy: (policy: "privacy" | "terms" | "quality") => void;
   onDashboard: () => void;
   open: (id: string) => void;
   cases: CaseItem[];
 }) {
+  const businessCases = cases.filter(
+    (item) => item.clientType !== "Particulier" || item.category === "Btw",
+  );
   return (
     <>
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">FISCALE LIJN / LOKALE DEMO · GEEN LOGIN NODIG</p>
+          <p className="eyebrow">BELASTINGHULP VOOR HET MKB · PUBLIEKE DEMO</p>
           <h1>
-            Een fiscale vraag verdient eerst een scherpe <em>route.</em>
+            Een belastingvraag in uw bedrijf? <em>We maken duidelijk wat u moet doen.</em>
           </h1>
           <p className="lead">
-            Plaats uw casus. Wij maken de feiten inzichtelijk, koppelen de
-            juiste fiscale expertise en houden menselijke controle centraal.
+            Deel uw verhaal, brief, document of een AI-antwoord dat u al heeft.
+            U krijgt eerst een gratis routecheck. Is specialistische controle
+            nodig, dan ziet u vooraf de vaste prijs en wie verantwoordelijk is.
           </p>
           <div className="actions">
             <button className="button primary" onClick={onIntake}>
-              Stel je fiscale vraag <Icon n="arrow" />
+              Leg uw belastingvraag voor <Icon n="arrow" />
             </button>
-            <button className="button secondary" onClick={onDashboard}>
-              Mijn casussen
-            </button>
-            <button className="button secondary" onClick={onBoard}>
-              Bekijk opdrachten als adviseur
+            <button
+              className="button secondary"
+              onClick={() => document.getElementById("hoe-het-werkt")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Bekijk hoe het werkt
             </button>
           </div>
-          <p className="micro">
-            <Icon n="shield" /> Geen productieomgeving. Alleen fictieve
-            demo-data, lokaal opgeslagen.
-          </p>
+          <div className="hero-assurances" aria-label="Belangrijkste zekerheden">
+            <span><Icon n="check" /> Eerste routecheck gratis</span>
+            <span><Icon n="check" /> Vooraf een vaste prijs</span>
+            <span><Icon n="check" /> Specialist controleert</span>
+          </div>
         </div>
-        <div className="hero-aside">
-          <div className="signal">
-            <span className="pulse" /> ACTIEF OP HET JOBBOARD
-          </div>
-          <div className="route">
-            <div className="route-line" />
-            <div className="route-item">
+        <aside className="hero-aside customer-route-card">
+          <p className="eyebrow">U WEET VOORAF</p>
+          <div className="customer-route">
+            <div>
               <b>01</b>
-              <span>Casus</span>
-              <strong>“Dubbele loonheffingskorting”</strong>
+              <span>Uw vraag is begrijpelijk gemaakt</span>
+              <strong>Feiten, deadline en ontbrekende informatie</strong>
             </div>
-            <div className="route-item active">
+            <div className="is-current">
               <b>02</b>
-              <span>Match</span>
-              <strong>Loonheffingen · 86%</strong>
+              <span>U ziet de route en prijs</span>
+              <strong>Gratis zelf verder of specialist vanaf €49*</strong>
             </div>
-            <div className="route-item">
+            <div>
               <b>03</b>
-              <span>Controle</span>
-              <strong>Menselijke review</strong>
+              <span>U krijgt een actiegericht antwoord</span>
+              <strong>Bronnen, risico, deadline en volgende stap</strong>
             </div>
           </div>
-          <div className="aside-foot">
-            {cases.length} demo-casussen <span>·</span>{" "}
-            {cases.filter((c) => c.category === "Loonheffingen").length}{" "}
-            loonheffingen
-          </div>
+          <small>* Indicatieve demoprijs, exclusief btw. De echte prijs volgt pas na de routecheck.</small>
+        </aside>
+      </section>
+
+      <section className="mkb-situations" aria-labelledby="situation-title">
+        <div className="section-intro">
+          <p className="eyebrow">WAARMEE KUNNEN WE HELPEN?</p>
+          <h2 id="situation-title">Begin bij wat er speelt, niet bij de belastingwet.</h2>
+          <p>U hoeft de juiste fiscale categorie niet te kennen. Kies herkenning of leg uw verhaal vrij voor.</p>
+        </div>
+        <div className="situation-grid">
+          {[
+            ["Btw & facturen", "Tarief, aftrek, vrijstelling of een factuur naar het buitenland."],
+            ["Personeel & loon", "Loonheffingen, vergoedingen, auto van de zaak of een buitenlandse werknemer."],
+            ["Winst & aangifte", "Zakelijke kosten, eerste jaar ondernemen of een onverwachte aanslag."],
+            ["BV & ondernemen", "Vennootschapsbelasting, dga-vragen of geld tussen privé en de bv."],
+            ["Brief of deadline", "Een brief, controle, naheffing of bezwaar waarop u moet reageren."],
+            ["Ik weet het niet", "Geen probleem. Wij bepalen eerst waar uw vraag thuishoort."],
+          ].map(([title, text], index) => (
+            <button className="situation-card" key={title} onClick={onIntake}>
+              <span>0{index + 1}</span>
+              <strong>{title}</strong>
+              <small>{text}</small>
+              <Icon n="arrow" />
+            </button>
+          ))}
         </div>
       </section>
-      <section className="process">
+
+      <section className="process" id="hoe-het-werkt">
         <div>
           <p className="eyebrow">HOE HET WERKT</p>
-          <h2>Van onduidelijke vraag naar gecontroleerd antwoord.</h2>
+          <h2>Van losse informatie naar een besluit waar u mee verder kunt.</h2>
         </div>
         <div className="process-grid">
           <Process
             n="01"
-            title="Plak wat u heeft"
-            text="Een rommelig verhaal, losse feiten of een eerder AI-antwoord zijn welkom."
+            title="Deel wat u heeft"
+            text="Een rommelig verhaal, brief, document of eerder AI-antwoord is genoeg om te beginnen."
           />
           <Process
             n="02"
-            title="Wij structureren"
-            text="De casus wordt geanonimiseerd, samengevat en voorzien van fiscale tags."
+            title="Gratis routecheck"
+            text="Wij ordenen de vraag, signaleren privacyrisico's en bepalen of gratis hulp volstaat."
           />
           <Process
             n="03"
-            title="Adviseur kiest"
-            text="Een expert ziet direct specialisatie, behandeltijd, vergoeding en match."
+            title="Vaste prijs en specialist"
+            text="Als controle nodig is, ziet u de totale demoprijs en waarom de aanbevolen specialist past."
           />
           <Process
             n="04"
-            title="Klant betaalt"
-            text="Pas na acceptatie staat een transparant mock-betaalverzoek klaar."
-          />
-          <Process
-            n="05"
-            title="Expert controleert"
-            text="De adviseur toetst AI-conclusies, bronnen en ontbrekende feiten."
-          />
-          <Process
-            n="06"
-            title="Antwoord geleverd"
-            text="De klant ontvangt een duidelijk gescheiden, gecontroleerd eindantwoord."
+            title="Duidelijk antwoord en actie"
+            text="U krijgt antwoord, onderbouwing, onzekerheden, deadline en concrete vervolgstappen."
           />
         </div>
       </section>
-      <section className="trust">
-        <div>
-          <Icon n="shield" />
-          <strong>AI is geen adviseur</strong>
-          <span>
-            Geen bron, geen stellige conclusie. Elk antwoord wordt als concept
-            gemarkeerd.
-          </span>
+
+      <section className="service-ladder">
+        <div className="section-intro">
+          <p className="eyebrow">PASSENDE HULP, GEEN ZWAAR TRAJECT</p>
+          <h2>Betaal alleen voor de controle die uw vraag nodig heeft.</h2>
         </div>
-        <div>
-          <Icon n="lock" />
-          <strong>Privacy als uitgangspunt</strong>
-          <span>
-            Adviseurs zien alleen de geanonimiseerde versie van een casus.
-          </span>
+        <div className="service-grid">
+          <article>
+            <span className="service-number">01</span>
+            <p className="eyebrow">ROUTECHECK</p>
+            <h3>Gratis</h3>
+            <p>Structuur, onderwerp, ontbrekende informatie en een duidelijke vervolgrichting.</p>
+            <ul><li>Vrije intake</li><li>Privacycontrole</li><li>Doorverwijzing als specialist niet nodig is</li></ul>
+            <button className="text-button" onClick={onIntake}>Start routecheck <Icon n="arrow" /></button>
+          </article>
+          <article className="recommended-service">
+            <span className="service-badge">MEEST GESCHIKT VOOR EEN AFGEBAKENDE VRAAG</span>
+            <p className="eyebrow">BELASTINGCHECK</p>
+            <h3>Vanaf €49 <small>excl. btw*</small></h3>
+            <p>Controle door een passende specialist, met bronnen en praktisch actieplan.</p>
+            <ul><li>Vaste prijs vooraf</li><li>Eén gerichte verduidelijkingsronde</li><li>Gecontroleerd antwoord</li></ul>
+          </article>
+          <article>
+            <span className="service-number">03</span>
+            <p className="eyebrow">SPECIALISTISCH ADVIES</p>
+            <h3>Vaste prijs</h3>
+            <p>Voor meer feiten, hoger risico of een korte deadline. U beslist pas na de prijs.</p>
+            <ul><li>Specialist op onderwerp</li><li>Scope en verantwoordelijkheid vastgelegd</li><li>Meerwerk alleen na akkoord</li></ul>
+          </article>
         </div>
-        <div>
-          <Icon n="file" />
-          <strong>Bronnen in beeld</strong>
-          <span>
-            Per conclusie tonen we bronsoort, versie en ontbrekende feiten.
-          </span>
+        <p className="price-note">* Dit zijn indicatieve prijzen in de MVP. In productie staat altijd het totale bedrag exclusief btw vóór betaling in beeld.</p>
+      </section>
+
+      <section className="quality-proof">
+        <div className="quality-copy">
+          <p className="eyebrow">WIE DRAAGT DE VERANTWOORDELIJKHEID?</p>
+          <h2>Techniek ordent. Een mens beoordeelt.</h2>
+          <p>Fiscale Lijn is bemiddelaar en organiseert intake, matching, betaling en kwaliteitscontrole. De gekozen specialist is verantwoordelijk voor het definitieve advies binnen de afgesproken scope.</p>
+          <button className="text-button" onClick={() => onPolicy("quality")}>Lees hoe kwaliteit en klachten werken <Icon n="arrow" /></button>
+        </div>
+        <div className="quality-checks">
+          <div><Icon n="shield" /><span><strong>Geverifieerde specialist</strong><small>Identiteit, vakgebied, ervaring en verzekering worden vóór productie gecontroleerd.</small></span></div>
+          <div><Icon n="file" /><span><strong>Bronnen en onzekerheid zichtbaar</strong><small>Geen bron betekent geen stellige conclusie. Ontbrekende feiten blijven in beeld.</small></span></div>
+          <div><Icon n="lock" /><span><strong>Minimale gegevensdeling</strong><small>De specialist ziet alleen wat voor de beoordeling noodzakelijk is.</small></span></div>
         </div>
       </section>
+
       <section className="demo-cases">
         <div className="section-head">
           <div>
-            <p className="eyebrow">VOORBEELDEN</p>
-            <h2>Casussen die al klaarstaan.</h2>
+            <p className="eyebrow">VOORBEELDEN UIT DE DEMO</p>
+            <h2>Zo ziet een zakelijke belastingvraag eruit.</h2>
           </div>
-          <button className="text-button" onClick={onBoard}>
-            Naar het jobboard <Icon n="arrow" />
+          <button className="text-button" onClick={onDashboard}>
+            Mijn vragen bekijken <Icon n="arrow" />
           </button>
         </div>
         <div className="mini-list">
-          {cases.slice(0, 3).map((c) => (
+          {(businessCases.length ? businessCases : cases).slice(0, 3).map((c) => (
             <button key={c.id} className="mini-case" onClick={() => open(c.id)}>
               <span className="case-code">{c.id}</span>
               <strong>{c.title}</strong>
               <span>
-                {c.category} · {c.complexity} · €{c.fee}
+                {c.category} · {c.complexity} · {c.fee ? `vaste demoprijs €${c.fee} excl. btw` : "routecheck"}
               </span>
               <Icon n="arrow" />
             </button>
           ))}
         </div>
       </section>
-      <footer>
-        <span>fiscale lijn</span>
-        <span>Demo-interface · geen professioneel advies · 2026</span>
+      <footer className="site-footer">
+        <div className="footer-brand"><strong>fiscale lijn</strong><span>Belastinghulp voor het mkb</span></div>
+        <div className="footer-links" aria-label="Informatie">
+          <button onClick={() => onPolicy("privacy")}>Privacy</button>
+          <button onClick={() => onPolicy("terms")}>Platformrol & voorwaarden</button>
+          <button onClick={() => onPolicy("quality")}>Kwaliteit & klachten</button>
+        </div>
+        <div className="footer-links secondary-links" aria-label="Andere omgevingen">
+          <button onClick={onAdvisor}>Voor adviseurs</button>
+          <button onClick={onInvestor}>Voor investeerders</button>
+        </div>
+        <span className="footer-disclaimer">Publieke demo · geen professioneel advies of beveiligde productieomgeving · 2026</span>
       </footer>
     </>
   );
 }
+
+function PolicyPage({
+  type,
+  onBack,
+}: {
+  type: "privacy" | "terms" | "quality";
+  onBack: () => void;
+}) {
+  const content = {
+    privacy: {
+      eyebrow: "PRIVACY / DEMOBELEID",
+      title: "Deel alleen wat nodig is voor uw belastingvraag.",
+      intro:
+        "Deze publieke MVP is geen beveiligde productieomgeving. Gebruik uitsluitend fictieve gegevens. De onderstaande principes beschrijven de bedoelde productwerking, niet een al afgeronde AVG-implementatie.",
+      sections: [
+        ["Wat de demo doet", "Vrije tekst wordt lokaal op herkenbare persoonsgegevens gecontroleerd. U ziet origineel en geanonimiseerd naast elkaar en moet de anonimisering zelf goedkeuren voordat de vraag verdergaat."],
+        ["Wat de demo niet doet", "GitHub Pages biedt geen accountbeveiliging, versleutelde dossieropslag of gecontroleerde documentverwerking. Bestanden worden in deze versie niet geüpload; alleen bestandsnaam en grootte worden lokaal getoond."],
+        ["Productieprincipe", "Originele klantinput en de geanonimiseerde expertversie blijven strikt gescheiden. Alleen noodzakelijke gegevens gaan naar een specialist. Bewaartermijnen, verwijdering, inzage en verwerkersafspraken moeten vóór een echte pilot formeel zijn ingericht."],
+      ],
+    },
+    terms: {
+      eyebrow: "PLATFORMROL / CONCEPT",
+      title: "Duidelijk over wie wat doet.",
+      intro:
+        "Fiscale Lijn is ontworpen als bemiddelaar en tussenpartij voor intake, matching, betaling en facturatie. De specialist geeft het definitieve advies en is daarvoor verantwoordelijk binnen de afgesproken scope.",
+      sections: [
+        ["Rol van het platform", "Het platform structureert de vraag, ondersteunt anonimisering, doet een uitlegbare match en faciliteert betaling. Een AI-concept is nooit zelfstandig advies en wordt niet als eindantwoord geleverd."],
+        ["Rol van de specialist", "De gekozen specialist controleert feiten, aannames en bronnen, benoemt onzekerheden en levert het eindantwoord. Beroepskwalificaties en aansprakelijkheidsdekking moeten vóór toelating tot een productieplatform zijn geverifieerd."],
+        ["Prijs en meerwerk", "De klant ziet vóór betaling een vaste totaalprijs exclusief btw. Extra vragen mogen de prijs alleen verhogen als het platform de noodzaak controleert en de klant daarna expliciet akkoord gaat."],
+      ],
+    },
+    quality: {
+      eyebrow: "KWALITEIT / CONCEPTKADER",
+      title: "Een controleerbaar antwoord, niet alleen een overtuigend antwoord.",
+      intro:
+        "Kwaliteit bestaat hier uit aantoonbare vakkennis, passende ervaring, brononderbouwing, transparante onzekerheid en een duidelijke route als iets misgaat.",
+      sections: [
+        ["Toelating van specialisten", "Voor productie worden identiteit, relevante opleiding of registratie, specialisaties, ervaring en beroepsaansprakelijkheidsverzekering gecontroleerd. Reviews tellen pas mee na een afgeronde opdracht."],
+        ["Vaste antwoordstructuur", "Elk eindantwoord bevat: kort antwoord, betekenis voor de onderneming, concrete actie, deadline, onzekerheden, bronnen en het moment waarop aanvullende hulp nodig is."],
+        ["Klacht of twijfel", "De klant moet een antwoord kunnen markeren, een inhoudelijke reactie ontvangen en waar nodig escaleren naar platformcontrole. Doorlooptijden, herbeoordeling en eventuele restitutie worden vóór de betaalde pilot in een klachtenregeling vastgelegd."],
+      ],
+    },
+  }[type];
+
+  return (
+    <section className="page policy-page">
+      <button className="back" onClick={onBack}>← Terug naar start</button>
+      <div className="policy-hero">
+        <p className="eyebrow">{content.eyebrow}</p>
+        <h1>{content.title}</h1>
+        <p>{content.intro}</p>
+      </div>
+      <div className="policy-sections">
+        {content.sections.map(([title, text], index) => (
+          <article key={title}>
+            <span>0{index + 1}</span>
+            <div><h2>{title}</h2><p>{text}</p></div>
+          </article>
+        ))}
+      </div>
+      <div className="policy-warning"><Icon n="shield" /><span><strong>Belangrijk voor deze MVP</strong>Deze pagina is een product- en beleidsconcept, geen juridisch advies en geen vervanging voor definitieve voorwaarden, privacyverklaring of klachtenregeling.</span></div>
+    </section>
+  );
+}
+
 function Process({
   n,
   title,
@@ -2035,26 +2154,26 @@ function Intake({
   const fillExample = () =>
     setForm({
       ...form,
-      title: "Dubbele loonheffingskorting bij twee werkgevers",
+      title: "Btw op advies en online training",
       description:
-        "Ik werk sinds januari 2025 bij twee werkgevers. Op beide loonstroken lijkt de loonheffingskorting te zijn toegepast. Ik wil voorkomen dat ik bij mijn aangifte moet bijbetalen en weten welke werkgever de korting moet aanpassen.",
+        "Mijn eenmanszaak verkoopt adviesuren en een online training aan Nederlandse zakelijke klanten. Voor het advies bereken ik 21% btw. Een AI-tool zegt dat de training mogelijk is vrijgesteld, maar ik weet niet of dat klopt. Volgende maand moet ik aangifte doen.",
       question:
-        "Welke gevolgen heeft dit voor mijn aangifte en welke actie moet ik richting mijn werkgevers nemen?",
-      category: "Loonheffingen",
+        "Welk btw-tarief geldt voor de online training en hoe moet ik dit op mijn factuur en aangifte verwerken?",
+      category: "Btw",
       year: "2025",
-      clientType: "Particulier",
+      clientType: "Eenmanszaak",
       externalAi:
-        "Een eerder AI-antwoord zei dat er waarschijnlijk niets hoeft te gebeuren, maar gaf geen bron. Kunnen jullie controleren of dat klopt?",
+        "Een eerder AI-antwoord zei dat online onderwijs altijd is vrijgesteld van btw, maar noemde geen voorwaarden of bron. Kunnen jullie dit controleren?",
     });
   return (
     <section className="page narrow">
       <div className="page-head">
         <div>
-          <p className="eyebrow">KLANT / VRIJE INTAKE</p>
-          <h1>Gooi het verhaal hier neer.</h1>
+          <p className="eyebrow">MKB / GRATIS ROUTECHECK</p>
+          <h1>Vertel wat er speelt in uw bedrijf.</h1>
           <p>
-            Plak gerust e-mails, losse notities, eerdere antwoorden en halve
-            feiten. Wij halen er daarna een controleerbare fiscale casus uit.
+            Plak gerust een brief, e-mail, losse notities of een eerder
+            AI-antwoord. U hoeft de belastingregels of juiste categorie niet te kennen.
           </p>
         </div>
         <button className="text-button" onClick={onCancel}>
@@ -2079,7 +2198,7 @@ function Intake({
             rows={10}
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
-            placeholder="Bijvoorbeeld: 'Ik werk sinds vorig jaar bij twee werkgevers...'. Alles wat u relevant vindt mag hier eerst in. Namen en andere persoonsgegevens graag weglaten."
+            placeholder="Bijvoorbeeld: 'Mijn eenmanszaak verkoopt advies en een online training. Ik twijfel over de btw...'. Alles wat relevant lijkt mag hier eerst in. Laat namen en persoonsgegevens weg."
           />
           <small className="helper">
             <Icon n="file" /> U hoeft zelf nog geen titel, categorie of fiscale
@@ -2088,28 +2207,31 @@ function Intake({
         </label>
         <div className="form-grid">
           <label>
-            Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Dubbele loonheffingskorting bij twee werkgevers")} label="Voorbeeld" />
+            Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Btw op advies en online training")} label="Voorbeeld" />
             <input
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
-              placeholder="Bijv. dubbele loonheffingskorting"
+              placeholder="Bijv. btw op online training"
             />
           </label>
           <label>
-            Mijn eigen inschatting van de categorie <small>optioneel</small>
+            Waar lijkt uw vraag over te gaan? <small>optioneel</small>
             <select
               value={form.category}
               onChange={(e) => set("category", e.target.value)}
             >
-              <option>Loonheffingen</option>
-              <option>Btw</option>
-              <option>Inkomstenbelasting</option>
               <option>Weet ik niet</option>
+              <option value="Btw">Btw & facturen</option>
+              <option value="Loonheffingen">Personeel & loon</option>
+              <option value="Inkomstenbelasting">Winst & inkomstenbelasting</option>
+              <option value="Vennootschapsbelasting">BV & vennootschapsbelasting</option>
+              <option value="Internationaal">Internationaal ondernemen</option>
+              <option value="Bezwaar">Brief, aanslag of bezwaar</option>
             </select>
           </label>
         </div>
           <label>
-            Als u één ding zeker wilt weten <small>optioneel</small> <ExampleButton onClick={() => set("question", "Welke gevolgen heeft dit voor mijn aangifte en welke actie moet ik richting mijn werkgevers nemen?")} label="Voorbeeld" />
+            Als u één ding zeker wilt weten <small>optioneel</small> <ExampleButton onClick={() => set("question", "Welk btw-tarief geldt en hoe verwerk ik dit op de factuur en aangifte?")} label="Voorbeeld" />
           <textarea
             rows={3}
             value={form.question}
@@ -2136,18 +2258,18 @@ function Intake({
               value={form.clientType}
               onChange={(e) => set("clientType", e.target.value)}
             >
-              <option>Particulier</option>
               <option>Eenmanszaak</option>
               <option>Bv</option>
               <option>Werkgever</option>
               <option>Stichting/vereniging</option>
+              <option>Particulier</option>
               <option>Weet ik niet</option>
             </select>
           </label>
         </div>
         <label className="external">
           <span>
-            AI-antwoord dat u al elders heeft gekregen <small>optioneel</small> <ExampleButton onClick={() => set("externalAi", "Een eerder AI-antwoord zei dat er waarschijnlijk niets hoeft te gebeuren, maar gaf geen bron. Kunnen jullie controleren of dat klopt?")} label="Voorbeeld" />
+            AI-antwoord dat u al elders heeft gekregen <small>optioneel</small> <ExampleButton onClick={() => set("externalAi", "Een eerder AI-antwoord zei dat online onderwijs altijd is vrijgesteld van btw, maar noemde geen voorwaarden of bron. Kunnen jullie dit controleren?")} label="Voorbeeld" />
           </span>
           <textarea
             rows={5}
@@ -2202,7 +2324,7 @@ function Intake({
             Terug
           </button>
           <button className="button primary" type="submit">
-            Structuur laten maken <Icon n="arrow" />
+            Gratis routecheck maken <Icon n="arrow" />
           </button>
         </div>
       </form>
@@ -2643,7 +2765,7 @@ function CaseDetail({
               ["Belastingjaar", item.year],
               ["Complexiteit", item.complexity],
               ["Geschatte tijd", item.minutes],
-              ["Vergoeding", `€${item.fee}`],
+              [role === "advisor" ? "Vergoeding" : role === "customer" ? "Vaste demoprijs excl. btw" : "Opdrachtwaarde", `€${item.fee}`],
               ["Ontbrekende feiten", String(item.missing)],
             ].map(([a, b]) => (
               <div className="summary-row" key={a}>
@@ -2755,7 +2877,7 @@ function Review({
 }) {
   const [notes, setNotes] = useState("");
   const [finalAnswer, setFinalAnswer] = useState(
-    `${item.aiAnswer}\n\nAanvulling adviseur: `,
+    `Kort antwoord\n\nWat dit voor uw onderneming betekent\n\nWat u nu moet doen\n\nDeadline\n\nOnzekerheden en ontbrekende informatie\n\nBronnen\n\nWanneer extra hulp nodig is`,
   );
   const [checks, setChecks] = useState([true, false, false, false]);
   const toggle = (i: number) =>
@@ -2765,7 +2887,7 @@ function Review({
   const canSubmit = checks.every(Boolean);
   const fillExample = () => {
     setFinalAnswer(
-      `${item.aiAnswer}\n\nAanvulling adviseur: De conclusie geldt alleen wanneer beide werkgevers de loonheffingskorting daadwerkelijk hebben toegepast. Controleer daarom eerst de loonstroken en de jaaropgaven.`,
+      `Kort antwoord\nDe conclusie uit het AI-concept is alleen bruikbaar nadat de onderliggende documenten zijn gecontroleerd.\n\nWat dit voor uw onderneming betekent\nEr kan een correctie of aangepaste verwerking nodig zijn; de precieze uitkomst hangt af van de bevestigde feiten.\n\nWat u nu moet doen\n1. Controleer de genoemde documenten.\n2. Leg de ontbrekende gegevens vast.\n3. Pas daarna de aangifte of administratie aan.\n\nDeadline\nHandel vóór de eerstvolgende aangifte- of reactiedatum.\n\nOnzekerheden en ontbrekende informatie\nDe relevante documenten zijn nog niet inhoudelijk geverifieerd.\n\nBronnen\n${item.source}.\n\nWanneer extra hulp nodig is\nLaat aanvullend beoordelen wanneer de documenten afwijken of de Belastingdienst al een standpunt heeft ingenomen.`,
     );
     setNotes(
       "De AI-conclusie is inhoudelijk bruikbaar, maar de loonstroken en jaaropgaven moeten worden gecontroleerd. De onzekerheid en vervolgstap zijn daarom expliciet aan de klant uitgelegd.",
