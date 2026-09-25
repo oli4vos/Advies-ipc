@@ -6,83 +6,24 @@ import {
   acceptInformationFee,
   answerInformation,
   claimCase,
-  confirmCaseStructure,
   createCase,
   decideInformationRequest,
-  getCase,
-  hasLocalApi,
-  listCaseDetails,
-  listJobboardDetails,
   payCase,
-  publishCase,
   requestInformation,
   ReviewInput,
   selectClaim,
-  setDemoRole,
   submitReview,
 } from "./lib/api";
 import { anonymiseText, findSensitiveData } from "./lib/anonymisation";
-
-type Role = "customer" | "advisor" | "admin";
-type Status =
-  | "PUBLISHED"
-  | "CLAIMED"
-  | "AWAITING_PAYMENT"
-  | "AWAITING_INFORMATION_PAYMENT"
-  | "NEEDS_INFORMATION"
-  | "PAID"
-  | "IN_REVIEW"
-  | "ANSWER_SUBMITTED"
-  | "DELIVERED"
-  | "PENDING_REVIEW";
-type CaseItem = {
-  id: string;
-  backendId?: string;
-  title: string;
-  category: string;
-  tags: string[];
-  summary: string;
-  facts: string[];
-  clientType: string;
-  year: string;
-  complexity: string;
-  minutes: string;
-  fee: number;
-  deadline: string;
-  missing: number;
-  match: number;
-  status: Status;
-  customerQuestion: string;
-  aiAnswer: string;
-  externalAi?: string;
-  anonymizedCustomerQuestion?: string;
-  anonymizedExternalAi?: string;
-  attachments?: UploadedAttachment[];
-  source: string;
-  sourceType: string;
-  history: { label: string; date: string }[];
-  claims?: ApiCase["claims"];
-  paymentStatus?: string;
-  finalAnswer?: string;
-  originalDescription?: string;
-  anonymizedDescription?: string;
-  informationRequests?: ApiCase["information_requests"];
-};
-type IntakeForm = {
-  title: string;
-  description: string;
-  question: string;
-  category: string;
-  year: string;
-  clientType: string;
-  externalAi: string;
-};
-type UploadedAttachment = {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-};
+import { useCaseWorkspace } from "./hooks/use-case-workspace";
+import { apiCaseToItem } from "./lib/case-mapper";
+import type {
+  CaseItem,
+  IntakeForm,
+  Role,
+  Status,
+  UploadedAttachment,
+} from "./lib/case-model";
 type PitchScenario = "conservative" | "base" | "growth";
 
 const DEMO_STORAGE_KEY = "fiscale-lijn-demo-state-v1";
@@ -370,63 +311,10 @@ function ExampleButton({ onClick, label = "Voorbeeld invullen" }: { onClick: () 
   );
 }
 
-function apiCaseToItem(item: ApiCase): CaseItem {
-  const source = item.sources[0];
-  return {
-    id: item.public_code,
-    backendId: item.id,
-    title: item.title,
-    category: item.category,
-    tags: item.specialization_tags,
-    summary: item.summary,
-    facts: item.facts.map((fact) => fact.value),
-    clientType: item.client_type,
-    year: item.tax_year,
-    complexity: item.complexity,
-    minutes: `${item.estimated_minutes_min}–${item.estimated_minutes_max} min`,
-    fee: item.offered_fee_cents / 100,
-    deadline: item.deadline_label,
-    missing: item.issues.filter(
-      (issue) => issue.resolution_status !== "RESOLVED",
-    ).length,
-    match:
-      item.category === "Loonheffingen"
-        ? 86
-        : item.category === "Btw"
-          ? 78
-          : 70,
-    status: item.status as Status,
-    customerQuestion: item.concrete_question,
-    anonymizedCustomerQuestion: item.concrete_question,
-    aiAnswer: item.ai_answer,
-    externalAi: item.external_ai_answer || undefined,
-    anonymizedExternalAi: item.external_ai_answer || undefined,
-    source: source?.citation || source?.title || "Nog geen bron gekoppeld",
-    sourceType: source?.source_type || "Niet geverifieerd",
-    claims: item.claims,
-    paymentStatus: item.payment?.status,
-    finalAnswer: item.reviews.at(-1)?.final_answer,
-    originalDescription: item.original_description || undefined,
-    anonymizedDescription: item.anonymized_description,
-    informationRequests: item.information_requests,
-    history: item.history
-      .slice()
-      .reverse()
-      .map((entry) => ({
-        label: entry.reason,
-        date: new Intl.DateTimeFormat("nl-NL", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }).format(new Date(entry.created_at)),
-      })),
-  };
-}
-
 export default function Home() {
   const [role, setRole] = useState<Role>("customer"),
     [view, setView] = useState("home"),
     [selectedId, setSelectedId] = useState("LH-1042"),
-    [cases, setCases] = useState(casesSeed),
     [filter, setFilter] = useState("Alle specialisaties"),
     [notice, setNotice] = useState(""),
     [storageReady, setStorageReady] = useState(false),
@@ -440,22 +328,23 @@ export default function Home() {
       clientType: "Eenmanszaak",
       externalAi: "",
     });
-  const loadBackendCases = async (activeRole: Role) => {
-    if (!hasLocalApi()) return;
-    try {
-      const items =
-        activeRole === "advisor"
-          ? await listJobboardDetails()
-          : await listCaseDetails();
-      setCases(items.map(apiCaseToItem));
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Casussen konden niet worden geladen.");
-    }
-  };
+  const {
+    cases,
+    setCases,
+    serverAuthoritative,
+    reload,
+    saveCase,
+    refreshCase,
+    persistStructure,
+    persistPublication,
+  } = useCaseWorkspace({
+    role,
+    fallbackCases: casesSeed,
+    onNotice: setNotice,
+  });
   useEffect(() => {
-    if (hasLocalApi()) {
+    if (serverAuthoritative) {
       setStorageReady(true);
-      void loadBackendCases("customer");
       return;
     }
 
@@ -470,11 +359,11 @@ export default function Home() {
     } finally {
       setStorageReady(true);
     }
-  }, []);
+  }, [serverAuthoritative]);
   useEffect(() => {
-    if (!storageReady || hasLocalApi()) return;
+    if (!storageReady || serverAuthoritative) return;
     window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(cases));
-  }, [cases, storageReady]);
+  }, [cases, serverAuthoritative, storageReady]);
   useEffect(() => {
     try {
       const storedDraft = window.localStorage.getItem(DEMO_DRAFT_KEY);
@@ -509,23 +398,30 @@ export default function Home() {
     );
   const changeRole = (r: Role) => {
       setRole(r);
-      setDemoRole(r);
-      if (hasLocalApi()) {
+      if (serverAuthoritative) {
         setCases([]);
-        void loadBackendCases(r);
+        void reload(r);
       }
       setView(r === "advisor" ? "jobboard" : r === "admin" ? "admin" : "home");
     },
     resetDemo = () => {
-      if (!hasLocalApi()) window.localStorage.removeItem(DEMO_STORAGE_KEY);
+      if (!serverAuthoritative) window.localStorage.removeItem(DEMO_STORAGE_KEY);
       window.localStorage.removeItem(DEMO_DRAFT_KEY);
-      setCases(casesSeed);
+      if (serverAuthoritative) {
+        setCases([]);
+        void reload("customer");
+      } else {
+        setCases(casesSeed);
+      }
       setSelectedId("LH-1042");
       setRole("customer");
-      setDemoRole("customer");
       setFilter("Alle specialisaties");
       setView("home");
-      setNotice("Demo teruggezet naar de startsituatie.");
+      setNotice(
+        serverAuthoritative
+          ? "Lokale backend opnieuw geladen; bestaande casussen zijn niet verwijderd."
+          : "Demo teruggezet naar de startsituatie.",
+      );
     },
     open = (id: string) => {
       setSelectedId(id);
@@ -542,29 +438,15 @@ export default function Home() {
         current?.backendId &&
         (status === "PUBLISHED" || msg.startsWith("Structuur bevestigd"))
       ) {
-        try {
-          const saved =
-            status === "PUBLISHED"
-              ? await publishCase(current.backendId)
-              : await confirmCaseStructure(
-                  current.backendId,
-                  true,
-                  anonymizedText || current.anonymizedDescription || "",
-                );
-          const mapped = apiCaseToItem(saved);
-          setCases((items) =>
-            items.map((item) => (item.id === id ? mapped : item)),
+        if (status === "PUBLISHED") {
+          await persistPublication(id);
+        } else {
+          await persistStructure(
+            id,
+            anonymizedText || current.anonymizedDescription || "",
           );
-          setNotice(msg);
-          return;
-        } catch (error) {
-          setNotice(
-            error instanceof Error
-              ? error.message
-              : "De status kon niet worden opgeslagen.",
-          );
-          return;
         }
+        return;
       }
       setCases((items) =>
         items.map((item) =>
@@ -579,38 +461,6 @@ export default function Home() {
         ),
       );
       setNotice(msg);
-    },
-    saveCase = async (
-      id: string,
-      saver: (backendId: string) => Promise<ApiCase>,
-      msg: string,
-    ) => {
-      const current = cases.find((item) => item.id === id);
-      if (!current?.backendId) {
-        update(
-          id,
-          msg.startsWith("Mock")
-            ? "PAID"
-            : msg.startsWith("Interesse")
-              ? "CLAIMED"
-              : "DELIVERED",
-          msg,
-        );
-        return;
-      }
-      try {
-        const mapped = apiCaseToItem(await saver(current.backendId));
-        setCases((items) =>
-          items.map((item) => (item.id === id ? mapped : item)),
-        );
-        setNotice(msg);
-      } catch (error) {
-        setNotice(
-          error instanceof Error
-            ? error.message
-            : "De actie kon niet worden opgeslagen.",
-        );
-      }
     },
     claim = async (id: string, message = "Ik kan deze casus binnen één werkdag beoordelen en de broncontrole uitvoeren.") => {
       const current = cases.find((item) => item.id === id);
@@ -742,34 +592,13 @@ export default function Home() {
         setView("case");
         return;
       }
-      try {
-        const mapped = apiCaseToItem(
-          await submitReview(current.backendId, input),
-        );
-        setCases((items) =>
-          items.map((item) => (item.id === id ? mapped : item)),
-        );
-        setNotice("Definitief gecontroleerd antwoord afgeleverd.");
-        setView("case");
-      } catch (error) {
-        setNotice(
-          error instanceof Error
-            ? error.message
-            : "Het antwoord kon niet worden ingediend.",
-        );
-      }
+      const saved = await saveCase(
+        id,
+        (backendId) => submitReview(backendId, input),
+        "Definitief gecontroleerd antwoord afgeleverd.",
+      );
+      if (saved) setView("case");
     };
-  const refreshBackendCase = async (id: string, action: (backendId: string) => Promise<unknown>) => {
-    const current = cases.find((item) => item.id === id);
-    if (!current?.backendId) return;
-    try {
-      await action(current.backendId);
-      const mapped = apiCaseToItem(await getCase(current.backendId));
-      setCases((items) => items.map((item) => (item.id === id ? mapped : item)));
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "De aanvullende informatie kon niet worden opgeslagen.");
-    }
-  };
   const askInformation = (id: string, question: string) =>
     (() => {
       const current = cases.find((item) => item.id === id);
@@ -812,7 +641,7 @@ export default function Home() {
         setNotice("De aanvullende vraag is noodzakelijk verklaard. De klant kan antwoorden.");
         return;
       }
-      void refreshBackendCase(id, (backendId) => requestInformation(backendId, question));
+      void refreshCase(id, (backendId) => requestInformation(backendId, question));
     })();
   const answerInfo = (id: string, requestId: string, answer: string) =>
     (() => {
@@ -836,7 +665,7 @@ export default function Home() {
         setNotice("Informatie ontvangen. De klant kan de noodzakelijke toeslag bevestigen.");
         return;
       }
-      void refreshBackendCase(id, (backendId) => answerInformation(backendId, requestId, answer));
+      void refreshCase(id, (backendId) => answerInformation(backendId, requestId, answer));
     })();
   const acceptFee = (id: string, requestId: string) =>
     (() => {
@@ -861,15 +690,15 @@ export default function Home() {
         setNotice("Toeslag bevestigd. De aanvullende mockbetaling staat klaar.");
         return;
       }
-      void refreshBackendCase(id, (backendId) => acceptInformationFee(backendId, requestId));
+      void refreshCase(id, (backendId) => acceptInformationFee(backendId, requestId));
     })();
   const decideInfo = (id: string, requestId: string, approve: boolean, feeDeltaCents = 0) =>
-    refreshBackendCase(id, (backendId) =>
+    refreshCase(id, (backendId) =>
       decideInformationRequest(backendId, requestId, approve, feeDeltaCents),
     );
   const submit = async (e: React.FormEvent, attachments: UploadedAttachment[] = []) => {
     e.preventDefault();
-    if (hasLocalApi()) {
+    if (serverAuthoritative) {
       try {
         const saved = {
           ...apiCaseToItem(await createCase({
@@ -1036,7 +865,7 @@ export default function Home() {
         <Intake
           form={form}
           setForm={setForm}
-          publicDemo={!hasLocalApi()}
+          publicDemo={!serverAuthoritative}
           onSubmit={submit}
           onCancel={() => setView("home")}
         />
