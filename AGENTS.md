@@ -1,12 +1,12 @@
 # Project context for coding agents
 
-Read this file before changing the product. The durable product rationale lives in `docs/PRODUCT-STRATEGY.md`; the technical blueprint lives in `docs/ARCHITECTURE-BLUEPRINT.md`.
+Read this file before changing the product. The durable product rationale lives in `docs/PRODUCT-STRATEGY.md`; the technical blueprint lives in `docs/ARCHITECTURE-BLUEPRINT.md`; founder intent and unresolved assumptions live in `docs/FOUNDER-VISION-CONTEXT.md`.
 
 ## Product direction
 
-- Mission: make high-quality tax advice accessible without forcing every question into an expensive full-service engagement.
-- First target segment: Dutch small and medium-sized businesses (MKB), including sole traders, BVs and employers.
-- First wedge: bounded VAT/invoicing and employer/payroll questions. Profit tax, corporate tax and cross-border business follow. Consumer tax topics are a later expansion, not the launch message.
+- Mission: let a business of any size obtain a sharply scoped, reliable answer from the right tax specialist without defaulting to a long, expensive advisory engagement. Start with MKB; serve larger businesses with specialist questions once the model is proven.
+- First target segment: Dutch medium-sized sole traders and MKB businesses with meaningful turnover and budget, including BVs and employers. They value certainty and speed over the lowest possible price.
+- First wedge: bounded VAT, deductible costs/business expenses and employer/payroll questions. Profit tax, corporate tax and cross-border business follow. Consumer tax topics are a later expansion, not the launch message.
 - Customer language uses `belastingvraag`, `belastinghulp`, `vaste prijs` and `specialist`. Reserve `fiscaal`, `casus`, `jobboard`, `claim` and `vergoeding` for advisor/admin or internal interfaces.
 - The customer starts with their situation, not a tax category. “Ik weet het niet” must remain a valid route.
 - Accept free-form text, documents and an AI answer generated elsewhere. Never treat external AI text as verified advice.
@@ -14,7 +14,7 @@ Read this file before changing the product. The durable product rationale lives 
 ## Customer promise
 
 1. A free route check structures the question and determines whether free/self-service help may be enough.
-2. If expert work is needed, show scope, the recommended specialist, responsibility and a fixed total price before payment.
+2. If expert work is needed, show scope, the recommended specialist, responsibility and a clear total price before payment. Fixed scope/price is the pilot default; later, controlled market-based price differentiation may be introduced without an open reverse auction.
 3. Extra information may increase the price only when the platform confirms it is necessary and the customer explicitly accepts it.
 4. A final answer follows this fixed structure: short answer; impact on the business; action now; deadline; uncertainties/missing facts; sources; when more help is needed.
 
@@ -25,9 +25,18 @@ The public customer experience must not expose marketplace mechanics. The adviso
 - Intended legal model: Fiscale Lijn is an intermediary for intake, matching, payment and invoicing; the selected advisor is responsible for the final advice within the agreed scope.
 - This is a design assumption, not settled legal advice. Validate contracts, invoicing, professional liability, complaints and payment flows with Dutch legal/tax counsel before a paid pilot.
 - Production expert onboarding must verify identity, relevant qualification/registration, subject experience and professional liability insurance.
+- The production baseline for tax advisors is active registration with NOB or Register Belastingadviseurs (RB), plus identity, specialism, experience and insurance verification. Do not present demo profiles as verified.
 - “No source, no firm conclusion.” Always expose uncertainty and missing facts.
 - Original input, anonymised output, customer-supplied AI, platform AI, sources and human corrections are separate, versioned records.
-- Operational feedback is never automatically training data. Consent, purpose limitation, second de-identification and dataset approval are mandatory.
+- Operational feedback is never automatically training data. Consent or another documented legal basis, purpose limitation, second de-identification, quality review and dataset approval are mandatory. Never promise that raw customer dossiers can be sold, used for fine-tuning or exposed through an MCP.
+
+## Founder priorities
+
+- Sell confidence: a bounded answer that a business can act on and defend in a tax review, not “cheap AI advice”.
+- Human review and honest uncertainty are non-negotiable. AI can offer free orientation, triage and drafts; only a qualified expert can deliver the paid final advice.
+- Complex, document-heavy or enterprise-wide work must be routed to an advisory firm or partner, not forced into this product.
+- Measure early success through paid questions, use of the free route, returning customers, customer satisfaction and expert supply/quality. Treat margin and speed as learning metrics, not optimisation targets in the first phase.
+- Build a venture-scale, diligence-ready company: traceable decisions, clear ownership, defensible data governance and no shortcuts that would obstruct investment or a future sale.
 
 ## Architecture constraints
 

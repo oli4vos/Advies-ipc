@@ -1,7 +1,7 @@
 # Architectuurblauwdruk — Fiscaal adviesplatform
 
 Status: richtinggevend ontwerp  
-Versie: 1.4
+Versie: 1.5
 Datum: 25 september 2026
 
 ## 1. Doel van dit document
@@ -16,11 +16,11 @@ De blauwdruk maakt steeds onderscheid tussen:
 
 De publieke demo mag nooit echte fiscale dossiers of persoonsgegevens verwerken.
 
-Productpositionering, doelgroep, klanttaal, dienstenladder en open commerciële beslissingen staan in [PRODUCT-STRATEGY.md](./PRODUCT-STRATEGY.md). Bij strijdigheid is dat document leidend voor productkeuzes en deze blauwdruk voor technische implementatie.
+Productpositionering, doelgroep, klanttaal, dienstenladder en open commerciële beslissingen staan in [PRODUCT-STRATEGY.md](./PRODUCT-STRATEGY.md). De gedateerde intentie van de oprichter staat in [FOUNDER-VISION-CONTEXT.md](./FOUNDER-VISION-CONTEXT.md). Bij strijdigheid zijn die documenten leidend voor productkeuzes en deze blauwdruk voor technische implementatie.
 
 ## 2. Productdefinitie
 
-Het platform is geen chatbot. Het is belastinghulp met een marketplace aan de aanbodzijde. De eerste doelgroep is het Nederlandse mkb: eenmanszaken, bv's en werkgevers met een concrete, afgebakende belastingvraag. Btw/facturen en werkgevers-/loonvragen vormen de eerste wedge.
+Het platform is geen chatbot. Het is belastinghulp met een marketplace aan de aanbodzijde. De eerste doelgroep is het Nederlandse mkb: middelgrote zzp'ers en ondernemingen met bestedingsruimte, waaronder bv's en werkgevers, met een concrete, afgebakende belastingvraag. Btw, aftrekposten/zakelijke kosten en werkgevers-/loonvragen vormen de eerste wedge.
 
 De klant ziet geen jobboardmechaniek en hoeft geen fiscale categorie te kennen. De primaire route is:
 
@@ -40,8 +40,10 @@ De kernbelofte is: **een rommelige belastingvraag wordt een duidelijke route, va
 ### 2.1 Dienstenladder en antwoordcontract
 
 - `ROUTE_CHECK`: gratis structurering, privacycontrole, ontbrekende informatie en vervolgrichting;
-- `BOUNDED_TAX_CHECK`: één afgebakende vraag, vaste prijs, passende specialist en één standaard verduidelijkingsronde;
+- `BOUNDED_TAX_CHECK`: één afgebakende vraag, een vooraf duidelijke totaalprijs, passende specialist en één standaard verduidelijkingsronde;
 - `SPECIALIST_ADVICE`: hoger risico of bredere scope, met expliciete prijs en meerwerkakkoord.
+
+De pilot gebruikt vaste scope/prijspakketten. Een latere `PRICE_QUOTE`-module kan tarieven differentiëren op complexiteit, tijd, urgentie en aanbod, maar toont altijd een totaalbedrag voor klantakkoord en is geen openbare bieding of prijsveiling.
 
 Een definitief antwoord bevat altijd: kort antwoord, betekenis voor de onderneming, actie nu, deadline, onzekerheden/ontbrekende feiten, bronnen en wanneer extra hulp nodig is.
 
@@ -195,6 +197,7 @@ Verantwoordelijk voor:
 - rollen en permissies;
 - klant- en expertprofielen;
 - expertverificatie;
+- registratie- en bewijsstatus voor actieve NOB- of RB-aansluiting, relevante ervaring en beroepsaansprakelijkheid;
 - sessies en auditcontext.
 
 ### 6.2 Case Intake
@@ -228,6 +231,7 @@ Verantwoordelijk voor:
 - AI-conceptantwoord;
 - claims, bronnen en zekerheid;
 - ontbrekende feiten en tegenstrijdigheden.
+- toetsing of een vraag binnen een productpakket past, inclusief een uitlegbare `OUT_OF_SCOPE`- of doorverwijsuitkomst voor zeer complexe, documentzware of organisatiebrede dossiers.
 
 ### 6.5 Marketplace & Matching
 
