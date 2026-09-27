@@ -388,6 +388,14 @@ export default function Home() {
       window.localStorage.removeItem(DEMO_DRAFT_KEY);
     }
   }, [draftReady, form]);
+  useEffect(() => {
+    if (!serverAuthoritative || !storageReady) return;
+    const requestedCode = new URLSearchParams(window.location.search).get("case");
+    if (!requestedCode || !cases.some((item) => item.id === requestedCode)) return;
+    setSelectedId(requestedCode);
+    setView("case");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [cases, serverAuthoritative, storageReady]);
   const selected = cases.find((c) => c.id === selectedId) || cases[0],
     filtered = useMemo(
       () =>

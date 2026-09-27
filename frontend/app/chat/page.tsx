@@ -18,7 +18,8 @@ export default function ChatPage() {
     isLoading,
     sendMessage,
     uploadFile,
-    error
+    error,
+    createdCaseCode,
   } = useChat()
 
   const scrollToBottom = () => {
@@ -136,6 +137,18 @@ export default function ChatPage() {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {createdCaseCode && (
+          <div className="mx-auto max-w-4xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+            <strong>De routecheck staat nu als casus in uw klantomgeving.</strong>
+            <a
+              className="ml-2 font-semibold underline"
+              href={`/?case=${encodeURIComponent(createdCaseCode)}`}
+            >
+              Open casus {createdCaseCode}
+            </a>
           </div>
         )}
 

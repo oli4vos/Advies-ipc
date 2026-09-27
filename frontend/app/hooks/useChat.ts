@@ -26,6 +26,7 @@ export function useChat() {
   const [messages, setMessages] = useState<ChatMessageRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [createdCaseCode, setCreatedCaseCode] = useState<string | null>(null)
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return
@@ -67,6 +68,7 @@ export function useChat() {
         urgency: 'Normaal',
         external_ai_answer: '',
       })
+      setCreatedCaseCode(result.public_code)
 
       setMessages(previous => [
         ...previous,
@@ -120,6 +122,7 @@ export function useChat() {
   const clearMessages = useCallback(() => {
     setMessages([])
     setError(null)
+    setCreatedCaseCode(null)
   }, [])
 
   return {
@@ -129,5 +132,6 @@ export function useChat() {
     sendMessage,
     uploadFile,
     clearMessages,
+    createdCaseCode,
   }
 }
