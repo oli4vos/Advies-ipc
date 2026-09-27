@@ -1751,3 +1751,26 @@ Tot dat moment blijft de GitHub Pages-versie een publieke demonstratie met uitsl
 - [Fly.io-regio's](https://fly.io/docs/reference/regions/) — beschikbaarheid van regio `ams` in Amsterdam.
 - [OpenAI API data controls](https://platform.openai.com/docs/models/default-usage-policies-by-endpoint) — EU data residency, regionale verwerking en vereisten voor ZDR/Modified Abuse Monitoring.
 - [Belastingdienst modelovereenkomst bemiddeling](https://download.belastingdienst.nl/belastingdienst/docs/alg_model_bemid_abu_dv10351z2ed.pdf) — voorbeeld waarin een bemiddelaar namens een opdrachtnemer factureert; toepassing op dit platform vereist eigen juridische en fiscale toetsing.
+
+## 27. Routecheck als alternatieve intake, niet als tweede product
+
+De routecheck op `/chat` is alleen een laagdrempelige ingang voor klanten die hun vraag vrij willen formuleren. Het is geen zelfstandig AI-product en mag geen tweede casus-, upload- of antwoordarchitectuur introduceren.
+
+De vaste keten is:
+
+```text
+Routecheck UI
+  → useChat
+    → app/lib/api.ts
+      → FastAPI /cases
+        → Case Intake, anonimisering, samenvatting en statusworkflow
+```
+
+Daaruit volgen deze regels:
+
+- de frontend maakt geen directe AI-, streaming- of uploadrequests;
+- alle persistente casusdata loopt via de centrale API-client en het bestaande casusmodel;
+- op GitHub Pages wordt geen klantinhoud doorgestuurd; de routecheck blijft daar een expliciete fictieve demo;
+- bestanden worden pas verwerkt nadat een private opslag- en documentpipeline is ingericht;
+- toekomstige AI-provideradapters horen in de Python-backend en leveren geclassificeerde, traceerbare output;
+- de volgende technische stap is het koppelen van het aangemaakte casus-id aan het bestaande klantworkspace, zodat de routecheck geen eindpunt maar een alternatieve start van dezelfde workflow is.
