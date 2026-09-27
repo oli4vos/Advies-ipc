@@ -1,27 +1,36 @@
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
+import { createCase, hasLocalApi, type ApiCase } from '../lib/api'
+import type { ChatMessageRecord } from '../lib/chat-model'
 
-interface Message {
-  id: string
-  role: 'user' | 'ai' | 'expert'
-  content: string
-  timestamp: Date
-  metadata?: {
-    tokens_used?: number
-    cost_usd?: number
-    model?: string
-  }
+function routeCheckSummary(result: ApiCase) {
+  const unresolvedIssues = result.issues.filter(
+    (issue) => issue.resolution_status !== 'RESOLVED',
+  ).length
+  const openPoints = unresolvedIssues
+    ? `Er staan nog ${unresolvedIssues} punt${unresolvedIssues === 1 ? '' : 'en'} open voor beoordeling.`
+    : 'Er zijn op dit moment geen open punten in de eerste structurering.'
+
+  return [
+    'Uw routecheck is opgeslagen.',
+    '',
+    `Onderwerp: ${result.category}`,
+    `Samenvatting: ${result.summary}`,
+    openPoints,
+    '',
+    'Controleer de gestructureerde intake. AI-output is een concept en geen definitief belastingadvies.',
+  ].join('\n')
 }
 
 export function useChat() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<ChatMessageRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return
 
-    const userMessage: Message = {
+    const userMessage: ChatMessageRecord = {
       id: Date.now().toString(),
       role: 'user',
       content: content.trim(),
@@ -33,93 +42,46 @@ export function useChat() {
     setError(null)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/ai/chat/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify({
-          question: content,
-        }),
+      if (!hasLocalApi()) {
+        setMessages(previous => [
+          ...previous,
+          {
+            id: `${Date.now()}-demo`,
+            role: 'ai',
+            content:
+              'Dit is de publieke demo. Gebruik uitsluitend fictieve gegevens. In de lokale MVP wordt uw verhaal via de centrale FastAPI-casusflow gestructureerd; op GitHub Pages wordt niets doorgestuurd.',
+            timestamp: new Date(),
+          },
+        ])
+        toast.success('Demo-routecheck uitgevoerd')
+        return
+      }
+
+      const result = await createCase({
+        title: 'Vrije intake via routecheck',
+        description: content.trim(),
+        question: content.trim(),
+        category: 'Weet ik niet',
+        tax_year: 'Weet ik niet',
+        client_type: 'Weet ik niet',
+        urgency: 'Normaal',
+        external_ai_answer: '',
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to send message')
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('No response body')
-      }
-
-      let aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: '',
-        timestamp: new Date(),
-      }
-
-      setMessages(prev => [...prev, aiMessage])
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            
-            if (data === '[DONE]') {
-              break
-            }
-
-            try {
-              const parsed = JSON.parse(data)
-              
-              if (parsed.type === 'content') {
-                aiMessage.content += parsed.content
-                setMessages(prev => 
-                  prev.map(msg => 
-                    msg.id === aiMessage.id 
-                      ? { ...msg, content: aiMessage.content }
-                      : msg
-                  )
-                )
-              } else if (parsed.type === 'metadata') {
-                aiMessage.metadata = {
-                  tokens_used: parsed.tokens_used,
-                  cost_usd: parsed.cost_usd,
-                  model: parsed.model,
-                }
-                setMessages(prev => 
-                  prev.map(msg => 
-                    msg.id === aiMessage.id 
-                      ? { ...msg, metadata: aiMessage.metadata }
-                      : msg
-                  )
-                )
-              }
-            } catch (e) {
-              console.error('Failed to parse SSE data:', e)
-            }
-          }
-        }
-      }
-
-      toast.success('Antwoord ontvangen')
+      setMessages(previous => [
+        ...previous,
+        {
+          id: `${Date.now()}-routecheck`,
+          role: 'ai',
+          content: routeCheckSummary(result),
+          timestamp: new Date(),
+        },
+      ])
+      toast.success('Routecheck opgeslagen')
     } catch (err) {
-      console.error('Chat error:', err)
-      setError('Er is een fout opgetreden bij het versturen van je bericht')
-      toast.error('Fout bij versturen bericht')
+      console.error('Routecheck error:', err)
+      setError('De routecheck kon niet worden opgeslagen. Probeer het opnieuw.')
+      toast.error('Routecheck mislukt')
     } finally {
       setIsLoading(false)
     }
@@ -137,44 +99,22 @@ export function useChat() {
     // Validate file type
     const allowedTypes = ['pdf', 'doc', 'docx', 'txt']
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
-    
+
     if (!fileExtension || !allowedTypes.includes(fileExtension)) {
       toast.error('Bestandstype niet ondersteund. Gebruik PDF, DOC, DOCX of TXT.')
       return
     }
 
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/files/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('File upload failed')
-      }
-
-      const result = await response.json()
-      toast.success('Bestand succesvol geüpload')
-      
-      // Add file message to chat
-      const fileMessage: Message = {
-        id: Date.now().toString(),
+    setMessages(previous => [
+      ...previous,
+      {
+        id: `${Date.now()}-file`,
         role: 'user',
-        content: `📎 ${file.name} geüpload`,
+        content: `📎 ${file.name} geselecteerd. Het bestand wordt in deze versie niet geüpload.`,
         timestamp: new Date(),
-      }
-
-      setMessages(prev => [...prev, fileMessage])
-    } catch (err) {
-      console.error('File upload error:', err)
-      toast.error('Fout bij uploaden bestand')
-    }
+      },
+    ])
+    toast.success('Bestand lokaal geselecteerd')
   }, [])
 
   const clearMessages = useCallback(() => {
@@ -190,4 +130,4 @@ export function useChat() {
     uploadFile,
     clearMessages,
   }
-} 
+}
