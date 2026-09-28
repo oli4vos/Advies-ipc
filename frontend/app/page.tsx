@@ -1447,6 +1447,32 @@ function caseDecision(item: CaseItem, role: Role): CaseDecision {
         description: "De klant heeft betaald. Controleer feiten, bronnen en onzekerheden voordat u het definitieve antwoord indient.",
       };
     }
+    if (item.status === "CLAIMED") {
+      return {
+        label: "Wacht op klantkeuze",
+        title: "Uw interesse is gedeeld met de klant.",
+        description: "De klant vergelijkt de inhoudelijke match en kiest welke specialist de opdracht krijgt. U hoeft nu niets te doen.",
+      };
+    }
+    if (item.status === "AWAITING_PAYMENT" || item.status === "AWAITING_INFORMATION_PAYMENT") {
+      return {
+        label: "Wacht op betaling",
+        title: "De klant heeft u gekozen.",
+        description: "Begin pas met de inhoudelijke controle nadat de betaling is bevestigd. De opdracht verschijnt daarna in uw reviewomgeving.",
+      };
+    }
+    if (item.status === "DELIVERED") {
+      return {
+        label: "Opdracht afgerond",
+        title: "Het gecontroleerde antwoord is afgeleverd.",
+        description: "De review, broncontrole en het definitieve antwoord blijven beschikbaar in het dossier.",
+      };
+    }
+    return {
+      label: "Opdrachtstatus",
+      title: "Bekijk de actuele status en het dossier.",
+      description: "De statusgeschiedenis laat zien welke stap is afgerond en wie nu aan zet is.",
+    };
   }
 
   if (role === "admin") {
