@@ -39,6 +39,16 @@ DEMO_IDENTITIES = {
 DEMO_ENVS = {"local", "test", "demo"}
 
 
+def require_mfa_assurance(role: str, claims: dict, required_roles: set[str]) -> None:
+    """Reject privileged OIDC sessions that have not completed MFA."""
+
+    if role in required_roles and claims.get("aal") != "aal2":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Voor deze platformrol is een bevestigde MFA-sessie vereist.",
+        )
+
+
 def ensure_demo_actor(session: Session, token: str) -> Actor:
     email, role, display_name = DEMO_IDENTITIES[token]
     user = session.scalar(select(models.User).where(models.User.email == email))
@@ -107,11 +117,7 @@ def _oidc_actor(session: Session, token: str) -> Actor:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Je account heeft nog geen toegestane platformrol.",
         )
-    if role in settings.mfa_required_role_set and claims.get("aal") != "aal2":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Voor deze platformrol is een bevestigde MFA-sessie vereist.",
-        )
+    require_mfa_assurance(role, claims, settings.mfa_required_role_set)
 
     email = str(claims.get("email") or f"{subject}@auth.invalid")
     display_name = str(claims.get("name") or claims.get("preferred_username") or email)

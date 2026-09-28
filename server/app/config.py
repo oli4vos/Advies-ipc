@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     auth_issuer: str | None = None
     auth_audience: str | None = None
     auth_mfa_required_roles: str = "ADMIN,ADVISOR"
+    ai_provider: str = "mock-local"
+    ai_budget_cents: int = 0
     storage_mode: str = "local"
     max_request_bytes: int = 1_048_576
 

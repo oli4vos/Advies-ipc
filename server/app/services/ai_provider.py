@@ -8,6 +8,7 @@ same small interface and return the existing AnalysisResult contract.
 from dataclasses import dataclass
 from typing import Protocol
 
+from ..config import get_settings
 from .analysis import AnalysisResult, analyse
 
 
@@ -59,4 +60,10 @@ def get_case_analysis_provider() -> CaseAnalysisProvider:
     schema tests before they can be enabled.
     """
 
+    settings = get_settings()
+    if settings.ai_provider != "mock-local":
+        raise RuntimeError(
+            "De geconfigureerde AI-provider is nog niet geïmplementeerd; "
+            "gebruik FISCALE_AI_PROVIDER=mock-local voor kosteloze uitvoering."
+        )
     return LocalRuleAnalysisProvider()
