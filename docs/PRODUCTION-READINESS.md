@@ -27,6 +27,35 @@ wat nog nodig is voordat een beperkte betaalde pilot kan starten.
 - `server/` is de canonieke FastAPI-backend voor deze repository. Losse,
   niet-getrackte backend/deploymentconcepten in de werkmap zijn niet gevalideerd
   en mogen niet als productiepad worden geactiveerd zonder aparte review.
+- De casus-analyse loopt via een providergrens met de lokale deterministische
+  rule-engine als standaard. Er wordt zonder expliciete providerimplementatie
+  geen externe AI-call gedaan en dus geen AI-kosten gemaakt.
+- OIDC-sessies voor `ADMIN` en `ADVISOR` vereisen server-side een bevestigde
+  MFA-assurance claim (`aal2`). Dit is de afdwingingslaag; het koppelen van een
+  echte identity-provider en TOTP-enrollment blijft een aparte configuratie- en
+  acceptatietaak.
+
+## Kostenloze uitvoeringsroute
+
+De MVP wordt in deze volgorde technisch opgebouwd zonder betaalde API-calls:
+
+1. **Lokaal betrouwbaar maken.** SQLite, de mockprovider, fictieve demo-accounts
+   en de bestaande API-tests blijven de standaard voor ontwikkeling.
+2. **Providergrenzen sluiten.** AI-output komt alleen via
+   `server/app/services/ai_provider.py`; een toekomstige provider moet dezelfde
+   analyse-uitkomst, provenance, privacytests en kostenlimieten respecteren.
+3. **Auth voorbereiden.** De backend vertrouwt geen frontendrol. In productie
+   komen rollen uit een geverifieerde OIDC-claim en krijgen adviseurs/beheerders
+   alleen toegang met `aal2`.
+4. **Staging zonder klantdata.** Gebruik PostgreSQL, een test-identity-provider
+   en private opslag met synthetische casussen. Test eigenaarschap, MFA,
+   anonimisering, statusovergangen en herstel voordat een betaalde pilot start.
+5. **Pas daarna externe diensten activeren.** Eerst een providerbudget en
+   dataverwerkingsovereenkomst vastleggen; daarna kan een AI-adapter worden
+   toegevoegd zonder de domeinworkflow te wijzigen.
+
+De lokale mockprovider is daarmee geen tijdelijke losse demo-code, maar het
+kostenloze contract waarmee alle toekomstige AI-providers vooraf getest worden.
 
 ## Nog verplicht vóór echte klantdata
 
