@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     clamav_host: str = "127.0.0.1"
     clamav_port: int = 3310
     malware_scan_timeout_seconds: int = 10
-    max_request_bytes: int = 1_048_576
+    # Leave room for multipart headers around the 10 MB private file limit.
+    max_request_bytes: int = 12 * 1024 * 1024
 
     model_config = SettingsConfigDict(
         env_file=SERVER_ROOT / ".env",
