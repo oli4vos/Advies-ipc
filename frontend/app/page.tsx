@@ -14,6 +14,7 @@ import {
   selectClaim,
   submitReview,
   uploadCaseAttachment,
+  downloadCaseAttachment,
 } from "./lib/api";
 import { anonymiseText, findSensitiveData } from "./lib/anonymisation";
 import { useCaseWorkspace } from "./hooks/use-case-workspace";
@@ -405,6 +406,20 @@ export default function Home() {
           : cases.filter((c) => c.category === filter),
       [cases, filter],
     );
+  const downloadAttachment = async (attachmentId: string, filename: string) => {
+    if (!selected?.backendId) return;
+    try {
+      const blob = await downloadCaseAttachment(selected.backendId, attachmentId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Document kon niet worden gedownload.");
+    }
+  };
   const changeRole = (r: Role) => {
       setRole(r);
       if (serverAuthoritative) {
@@ -919,6 +934,7 @@ export default function Home() {
         <CaseDetail
           item={selected}
           role={role}
+          downloadAttachment={downloadAttachment}
           back={() => setView(role === "advisor" ? "jobboard" : "home")}
           accept={(message) => claim(selected.id, message)}
           pay={() =>
@@ -2370,6 +2386,7 @@ function Jobboard({
 function CaseDetail({
   item,
   role,
+  downloadAttachment,
   back,
   accept,
   pay,
@@ -2382,6 +2399,7 @@ function CaseDetail({
 }: {
   item: CaseItem;
   role: Role;
+  downloadAttachment: (attachmentId: string, filename: string) => void;
   back: () => void;
   accept: (message: string) => void;
   pay: () => void;
@@ -2446,8 +2464,13 @@ function CaseDetail({
                     <Icon n="file" />
                     <span>
                       <b>{attachment.name}</b>
-                      <small>{formatFileSize(attachment.size)} · lokaal opgeslagen</small>
+                      <small>{formatFileSize(attachment.size)} · {attachment.remoteId ? "privé opgeslagen" : "lokaal geselecteerd"}</small>
                     </span>
+                    {attachment.remoteId && (
+                      <button type="button" className="text-button" onClick={() => downloadAttachment(attachment.remoteId!, attachment.name)}>
+                        Download
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

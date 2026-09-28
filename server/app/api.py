@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -79,6 +82,7 @@ async def upload_case_attachment(
         content_type=file.content_type or "application/octet-stream",
         size_bytes=size_bytes,
         sha256=sha256,
+        scan_status="LOCAL_BASIC_CHECKED",
     )
     session.add(attachment)
     session.flush()
@@ -89,12 +93,48 @@ async def upload_case_attachment(
             action="CASE_ATTACHMENT_STORED",
             object_type="CaseAttachment",
             object_id=attachment.id,
-            metadata_json={"case_id": case.id, "size_bytes": size_bytes, "scan_status": "NOT_SCANNED"},
+            metadata_json={"case_id": case.id, "size_bytes": size_bytes, "scan_status": "LOCAL_BASIC_CHECKED"},
         )
     )
     session.commit()
     session.refresh(attachment)
     return attachment
+
+
+@router.get("/cases/{case_id}/attachments/{attachment_id}")
+def download_case_attachment(
+    case_id: str,
+    attachment_id: str,
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+):
+    case = get_case_or_404(session, case_id)
+    attachment = session.scalar(
+        select(models.CaseAttachment).where(
+            models.CaseAttachment.id == attachment_id,
+            models.CaseAttachment.case_id == case.id,
+        )
+    )
+    if attachment is None:
+        raise HTTPException(status_code=404, detail="Document niet gevonden")
+
+    if actor.role == "CUSTOMER":
+        require_case_customer(actor, case)
+    elif actor.role == "ADMIN":
+        pass
+    else:
+        require_selected_expert(session, actor, case)
+        if case.status not in {"PAID", "IN_REVIEW", "NEEDS_INFORMATION", "ANSWER_SUBMITTED", "DELIVERED"}:
+            raise HTTPException(status_code=403, detail="Document is nog niet beschikbaar voor deze adviseur")
+
+    if attachment.scan_status != "LOCAL_BASIC_CHECKED":
+        raise HTTPException(status_code=423, detail="Document wacht op veiligheidscontrole")
+
+    root = Path(get_settings().storage_path).resolve()
+    path = (root / attachment.storage_key).resolve()
+    if root not in path.parents or not path.is_file():
+        raise HTTPException(status_code=404, detail="Documentbestand niet beschikbaar")
+    return FileResponse(path, media_type=attachment.content_type, filename=attachment.original_name)
 
 
 @router.post("/cases", response_model=CaseRead, status_code=201)

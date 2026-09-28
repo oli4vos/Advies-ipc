@@ -217,6 +217,19 @@ export async function uploadCaseAttachment(caseId: string, file: File) {
   return response.json() as Promise<ApiAttachment>;
 }
 
+export async function downloadCaseAttachment(caseId: string, attachmentId: string) {
+  const baseUrl = apiBaseUrl();
+  if (!baseUrl) throw new Error("Lokale documentopslag is niet geconfigureerd.");
+  const response = await fetch(`${baseUrl}/cases/${caseId}/attachments/${attachmentId}`, {
+    headers: { Authorization: `Bearer demo-${currentDemoRole}` },
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail || `Downloadfout ${response.status}`);
+  }
+  return response.blob();
+}
+
 export async function getCase(caseId: string) {
   return request<ApiCase>(`/cases/${caseId}`);
 }

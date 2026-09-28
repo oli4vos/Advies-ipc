@@ -27,7 +27,7 @@ def test_customer_upload_is_private_and_metadata_is_exposed_without_path(client,
     attachment = response.json()
     assert attachment["original_name"] == "aangifte.txt"
     assert attachment["size_bytes"] == len(b"fictieve inhoud")
-    assert attachment["scan_status"] == "NOT_SCANNED"
+    assert attachment["scan_status"] == "LOCAL_BASIC_CHECKED"
     assert attachment["sha256"]
     assert list((tmp_path / "private").rglob("*"))
     assert "aangifte.txt" not in str(next((tmp_path / "private").rglob("*")))
@@ -35,6 +35,12 @@ def test_customer_upload_is_private_and_metadata_is_exposed_without_path(client,
     detail = client.get(f"/api/v1/cases/{created['id']}")
     assert detail.status_code == 200
     assert detail.json()["attachments"][0]["original_name"] == "aangifte.txt"
+
+    downloaded = client.get(
+        f"/api/v1/cases/{created['id']}/attachments/{attachment['id']}"
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.content == b"fictieve inhoud"
 
 
 def test_upload_rejects_unsupported_extension(client, tmp_path, monkeypatch) -> None:
