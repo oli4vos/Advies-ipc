@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     storage_mode: str = "local"
     storage_path: str = str(SERVER_ROOT / "private_uploads")
     malware_scanner: str = "mock-local"
-    clamav_command: str = "clamdscan"
+    clamav_host: str = "127.0.0.1"
+    clamav_port: int = 3310
     malware_scan_timeout_seconds: int = 10
     max_request_bytes: int = 1_048_576
 

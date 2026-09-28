@@ -1,0 +1,11 @@
+services:
+  clamav:
+    image: clamav/clamav-debian:stable
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - clamav-database:/var/lib/clamav
+
+volumes:
+  clamav-database:
