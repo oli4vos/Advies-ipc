@@ -13,6 +13,7 @@ import {
   ReviewInput,
   selectClaim,
   submitReview,
+  uploadCaseAttachment,
 } from "./lib/api";
 import { anonymiseText, findSensitiveData } from "./lib/anonymisation";
 import { useCaseWorkspace } from "./hooks/use-case-workspace";
@@ -708,8 +709,7 @@ export default function Home() {
     e.preventDefault();
     if (serverAuthoritative) {
       try {
-        const saved = {
-          ...apiCaseToItem(await createCase({
+        const created = await createCase({
             title: form.title,
             description: form.description,
             question: form.question,
@@ -718,8 +718,22 @@ export default function Home() {
             client_type: form.clientType,
             urgency: "Normaal",
             external_ai_answer: form.externalAi,
-          })),
-          attachments,
+          });
+        const uploadedAttachments: UploadedAttachment[] = [];
+        for (const attachment of attachments) {
+          if (!attachment.file) continue;
+          const stored = await uploadCaseAttachment(created.id, attachment.file);
+          uploadedAttachments.push({
+            id: stored.id,
+            remoteId: stored.id,
+            name: stored.original_name,
+            size: stored.size_bytes,
+            type: stored.content_type,
+          });
+        }
+        const saved = {
+          ...apiCaseToItem(created),
+          attachments: uploadedAttachments,
         };
         setCases((items) => [
           saved,
@@ -1965,7 +1979,7 @@ function Intake({
     setFileError("");
     setAttachments((current) => [
       ...current,
-      ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, size: file.size, type: file.type })),
+      ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, size: file.size, type: file.type, file })),
     ].filter((file, index, all) => all.findIndex((candidate) => candidate.id === file.id) === index).slice(0, 5));
   };
   const handleSubmit = (event: React.FormEvent) => {
@@ -2419,6 +2433,27 @@ function CaseDetail({
               <p>{customer ? item.customerQuestion : item.anonymizedCustomerQuestion || item.customerQuestion}</p>
             </div>
           </section>
+          {customer && item.attachments && item.attachments.length > 0 && (
+            <section className="section-block">
+              <div className="block-title">
+                <span>02A</span>
+                <h2>Privédocumenten</h2>
+                <small>alleen zichtbaar voor u en de backend</small>
+              </div>
+              <div className="attachment-list" aria-label="Opgeslagen privédocumenten">
+                {item.attachments.map((attachment) => (
+                  <div className="attachment-row" key={attachment.id}>
+                    <Icon n="file" />
+                    <span>
+                      <b>{attachment.name}</b>
+                      <small>{formatFileSize(attachment.size)} · lokaal opgeslagen</small>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <small className="helper"><Icon n="shield" /> In deze MVP is nog geen download- of virusscanfunctie actief.</small>
+            </section>
+          )}
           <section className="section-block">
             <div className="block-title">
               <span>02</span>

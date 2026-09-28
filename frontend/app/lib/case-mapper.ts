@@ -39,6 +39,13 @@ export function apiCaseToItem(item: ApiCase): CaseItem {
     finalAnswer: item.reviews.at(-1)?.final_answer,
     originalDescription: item.original_description || undefined,
     anonymizedDescription: item.anonymized_description,
+    attachments: item.attachments.map((attachment) => ({
+      id: attachment.id,
+      remoteId: attachment.id,
+      name: attachment.original_name,
+      size: attachment.size_bytes,
+      type: attachment.content_type,
+    })),
     informationRequests: item.information_requests,
     history: item.history
       .slice()

@@ -61,6 +61,9 @@ class Case(Base):
     raw_inputs: Mapped[list[RawCaseInput]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="RawCaseInput.input_version"
     )
+    attachments: Mapped[list[CaseAttachment]] = relationship(
+        back_populates="case", cascade="all, delete-orphan", order_by="CaseAttachment.created_at"
+    )
     external_ai_answers: Mapped[list[ExternalAIAnswer]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
@@ -181,6 +184,24 @@ class RawCaseInput(Base):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     case: Mapped[Case] = relationship(back_populates="raw_inputs")
+
+
+class CaseAttachment(Base):
+    __tablename__ = "case_attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    case_id: Mapped[str] = mapped_column(ForeignKey("cases.id"), index=True)
+    uploaded_by: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    original_name: Mapped[str] = mapped_column(String(255))
+    storage_key: Mapped[str] = mapped_column(String(500), unique=True)
+    content_type: Mapped[str] = mapped_column(String(120))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    scan_status: Mapped[str] = mapped_column(String(32), default="NOT_SCANNED")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    case: Mapped[Case] = relationship(back_populates="attachments")
+    uploader: Mapped[User] = relationship()
 
 
 class ExternalAIAnswer(Base):

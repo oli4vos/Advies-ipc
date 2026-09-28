@@ -23,6 +23,7 @@ from .anonymisation import anonymise
 
 CASE_LOAD_OPTIONS = (
     selectinload(models.Case.raw_inputs),
+    selectinload(models.Case.attachments),
     selectinload(models.Case.external_ai_answers),
     selectinload(models.Case.facts),
     selectinload(models.Case.issues),
@@ -507,6 +508,7 @@ def case_to_read(case: models.Case, *, include_original: bool) -> CaseRead:
         concrete_question=case.summary.concrete_question if case.summary else "",
         anonymized_description=case.anonymized.anonymized_text if case.anonymized else "",
         original_description=case.raw_inputs[-1].raw_text if include_original and case.raw_inputs else None,
+        attachments=case.attachments if include_original else [],
         external_ai_answer=(
             case.external_ai_answers[-1].answer_text
             if include_original and case.external_ai_answers

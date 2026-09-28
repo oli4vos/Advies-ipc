@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,7 @@ from .schemas import (
     InformationRequestDecision,
     InformationRequestCreate,
     InformationRequestRead,
+    AttachmentRead,
 )
 from .services.cases import (
     case_to_list_item,
@@ -49,9 +50,51 @@ from .services.marketplace import (
     decide_information_request,
     request_information,
 )
+from .services.storage import store_private_upload
+from .config import get_settings
 
 
 router = APIRouter()
+
+
+@router.post("/cases/{case_id}/attachments", response_model=AttachmentRead, status_code=201)
+async def upload_case_attachment(
+    case_id: str,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    actor: Actor = Depends(get_current_actor),
+) -> AttachmentRead:
+    case = get_case_or_404(session, case_id)
+    require_case_customer(actor, case)
+    original_name, storage_key, size_bytes, sha256 = await store_private_upload(
+        file,
+        case_id=case.id,
+        root=get_settings().storage_path,
+    )
+    attachment = models.CaseAttachment(
+        case_id=case.id,
+        uploaded_by=actor.user.id,
+        original_name=original_name,
+        storage_key=storage_key,
+        content_type=file.content_type or "application/octet-stream",
+        size_bytes=size_bytes,
+        sha256=sha256,
+    )
+    session.add(attachment)
+    session.flush()
+    session.add(
+        models.AuditLog(
+            actor_type="CUSTOMER",
+            actor_id=actor.user.id,
+            action="CASE_ATTACHMENT_STORED",
+            object_type="CaseAttachment",
+            object_id=attachment.id,
+            metadata_json={"case_id": case.id, "size_bytes": size_bytes, "scan_status": "NOT_SCANNED"},
+        )
+    )
+    session.commit()
+    session.refresh(attachment)
+    return attachment
 
 
 @router.post("/cases", response_model=CaseRead, status_code=201)

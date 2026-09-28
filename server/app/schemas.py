@@ -237,6 +237,18 @@ class InformationAnswerCreate(BaseModel):
         return value.strip()
 
 
+class AttachmentRead(BaseModel):
+    id: str
+    original_name: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+    scan_status: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class CaseRead(BaseModel):
     id: str
     public_code: str
@@ -271,6 +283,7 @@ class CaseRead(BaseModel):
     payment: PaymentRead | None
     reviews: list[ExpertReviewRead]
     information_requests: list[InformationRequestRead]
+    attachments: list[AttachmentRead]
 
 
 class CaseListItem(BaseModel):

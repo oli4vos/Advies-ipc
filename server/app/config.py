@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ai_provider: str = "mock-local"
     ai_budget_cents: int = 0
     storage_mode: str = "local"
+    storage_path: str = str(SERVER_ROOT / "private_uploads")
     max_request_bytes: int = 1_048_576
 
     model_config = SettingsConfigDict(

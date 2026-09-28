@@ -19,6 +19,8 @@ export type UploadedAttachment = {
   name: string;
   size: number;
   type: string;
+  file?: File;
+  remoteId?: string;
 };
 
 export type CaseItem = {

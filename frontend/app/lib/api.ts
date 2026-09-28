@@ -98,6 +98,16 @@ export type ApiInformationRequest = {
   accepted_at: string | null;
 };
 
+export type ApiAttachment = {
+  id: string;
+  original_name: string;
+  content_type: string;
+  size_bytes: number;
+  sha256: string;
+  scan_status: string;
+  created_at: string;
+};
+
 export type ApiCase = {
   id: string;
   public_code: string;
@@ -127,6 +137,7 @@ export type ApiCase = {
   payment: ApiPayment | null;
   reviews: ApiReview[];
   information_requests: ApiInformationRequest[];
+  attachments: ApiAttachment[];
 };
 
 export type CaseInput = {
@@ -187,6 +198,23 @@ export async function createCase(input: CaseInput) {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export async function uploadCaseAttachment(caseId: string, file: File) {
+  const baseUrl = apiBaseUrl();
+  if (!baseUrl) throw new Error("Lokale documentopslag is niet geconfigureerd.");
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${baseUrl}/cases/${caseId}/attachments`, {
+    method: "POST",
+    headers: { Authorization: `Bearer demo-${currentDemoRole}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail || `Uploadfout ${response.status}`);
+  }
+  return response.json() as Promise<ApiAttachment>;
 }
 
 export async function getCase(caseId: string) {
