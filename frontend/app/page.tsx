@@ -861,17 +861,17 @@ export default function Home() {
         </details>
       </div>
       <header className="topbar">
-        <div className="brand" onClick={() => setView("home")}>
+        <button className="brand" type="button" onClick={() => setView("home")} aria-label="Fiscale Lijn — naar start">
           <span className="brand-mark">F</span>
           <span>fiscale lijn</span>
           <small>belastinghulp voor mkb</small>
-        </div>
-        <nav>
-          <button onClick={() => setView("home")}>{role === "customer" ? "Start" : "Overzicht"}</button>
-          {role === "customer" && <button onClick={() => setView("dashboard")}>Mijn vragen</button>}
-          {role === "customer" && <button onClick={() => setView("intake")}>Vraag voorleggen</button>}
-          {role === "advisor" && <button onClick={() => setView("jobboard")}>Opdrachten</button>}
-          {role === "admin" && <button onClick={() => setView("admin")}>Controle</button>}
+        </button>
+        <nav aria-label="Hoofdnavigatie">
+          <button className={view === "home" ? "active" : ""} aria-current={view === "home" ? "page" : undefined} onClick={() => setView("home")}>{role === "customer" ? "Start" : "Overzicht"}</button>
+          {role === "customer" && <button className={view === "dashboard" ? "active" : ""} aria-current={view === "dashboard" ? "page" : undefined} onClick={() => setView("dashboard")}>Mijn vragen</button>}
+          {role === "customer" && <button className={view === "intake" || view === "structured" ? "active" : ""} aria-current={view === "intake" || view === "structured" ? "page" : undefined} onClick={() => setView("intake")}>Vraag voorleggen</button>}
+          {role === "advisor" && <button className={view === "jobboard" || view === "case" || view === "review" ? "active" : ""} aria-current={view === "jobboard" ? "page" : undefined} onClick={() => setView("jobboard")}>Opdrachten</button>}
+          {role === "admin" && <button className={view === "admin" ? "active" : ""} aria-current={view === "admin" ? "page" : undefined} onClick={() => setView("admin")}>Controle</button>}
         </nav>
         <button className="profile-shortcut" onClick={() => setView(role === "customer" ? "dashboard" : role === "advisor" ? "jobboard" : "admin")}>
           <span className="avatar">
@@ -1424,6 +1424,97 @@ function nextStepForCase(item: CaseItem) {
   }
 }
 
+type CaseDecision = {
+  label: string;
+  title: string;
+  description: string;
+  action?: "specialist" | "pay" | "information" | "answer";
+};
+
+function caseDecision(item: CaseItem, role: Role): CaseDecision {
+  if (role === "advisor") {
+    if (item.status === "PUBLISHED") {
+      return {
+        label: "Beslismoment",
+        title: "Past deze opdracht bij uw expertise?",
+        description: `Beoordeel de kern in ${item.minutes}. De vergoeding is €${item.fee} en er zijn ${item.missing} ontbrekende feiten.`,
+      };
+    }
+    if (item.status === "PAID" || item.status === "IN_REVIEW") {
+      return {
+        label: "Uw volgende stap",
+        title: "Controleer het concept en leg uw oordeel vast.",
+        description: "De klant heeft betaald. Controleer feiten, bronnen en onzekerheden voordat u het definitieve antwoord indient.",
+      };
+    }
+  }
+
+  if (role === "admin") {
+    return {
+      label: "Platformcontrole",
+      title: "Controleer privacy, noodzakelijkheid en publicatiestatus.",
+      description: "Leg iedere statuswijziging vast en publiceer alleen informatie die een adviseur echt nodig heeft.",
+    };
+  }
+
+  switch (item.status) {
+    case "PENDING_REVIEW":
+      return {
+        label: "Routecheck wordt gecontroleerd",
+        title: "U hoeft nu niets te doen.",
+        description: "Wij controleren de structuur en anonimisering voordat een adviseur uw vraag kan zien.",
+      };
+    case "PUBLISHED":
+      return {
+        label: "Specialist wordt gezocht",
+        title: "Uw geanonimiseerde vraag staat klaar.",
+        description: "Alleen de noodzakelijke feiten zijn zichtbaar. Een passende specialist kan nu interesse tonen.",
+      };
+    case "CLAIMED":
+      return {
+        label: "Actie van u nodig",
+        title: "Er is een passende specialist beschikbaar.",
+        description: "Bekijk waarom deze specialist past en kies pas daarna of u de betaalde controle wilt starten.",
+        action: "specialist",
+      };
+    case "AWAITING_PAYMENT":
+    case "AWAITING_INFORMATION_PAYMENT":
+      return {
+        label: "Uw akkoord is nodig",
+        title: `Start de controle voor €${item.fee} excl. btw.`,
+        description: "Dit is de vaste demoprijs voor de getoonde scope. De specialist begint pas na uw betaling.",
+        action: "pay",
+      };
+    case "NEEDS_INFORMATION":
+      return {
+        label: "Actie van u nodig",
+        title: "De specialist mist één noodzakelijk feit.",
+        description: "Beantwoord alleen de gerichte vraag. Eventueel meerwerk wordt eerst door het platform en daarna door u goedgekeurd.",
+        action: "information",
+      };
+    case "PAID":
+    case "IN_REVIEW":
+      return {
+        label: "Controle loopt",
+        title: "De specialist beoordeelt uw vraag.",
+        description: "Feiten, bronnen en het AI-concept worden nu inhoudelijk gecontroleerd. U hoeft niets te doen.",
+      };
+    case "DELIVERED":
+      return {
+        label: "Antwoord beschikbaar",
+        title: "Uw gecontroleerde antwoord staat klaar.",
+        description: "Lees eerst het korte antwoord en daarna de onderbouwing, onzekerheden en concrete vervolgstappen.",
+        action: "answer",
+      };
+    default:
+      return {
+        label: "Huidige stap",
+        title: nextStepForCase(item),
+        description: "Bekijk hieronder wat al is afgerond en welke informatie bij deze stap hoort.",
+      };
+  }
+}
+
 function CustomerDashboard({ cases, open, onIntake }: { cases: CaseItem[]; open: (id: string) => void; onIntake: () => void }) {
   const actionCases = cases.filter((item) =>
     ["CLAIMED", "AWAITING_PAYMENT", "NEEDS_INFORMATION", "AWAITING_INFORMATION_PAYMENT", "DELIVERED"].includes(item.status),
@@ -1615,25 +1706,43 @@ function HomeView({
         <div className="service-grid">
           <article>
             <span className="service-number">01</span>
-            <p className="eyebrow">ROUTECHECK</p>
-            <h3>Gratis</h3>
-            <p>Structuur, onderwerp, ontbrekende informatie en een duidelijke vervolgrichting.</p>
-            <ul><li>Vrije intake</li><li>Privacycontrole</li><li>Doorverwijzing als specialist niet nodig is</li></ul>
-            <button className="text-button" onClick={onIntake}>Start routecheck <Icon n="arrow" /></button>
+            <div className="service-copy">
+              <p className="eyebrow">ROUTECHECK</p>
+              <h3>Van losse informatie naar een heldere route.</h3>
+              <p>Structuur, onderwerp, ontbrekende informatie en een duidelijke vervolgrichting.</p>
+              <ul><li>Vrije intake</li><li>Privacycontrole</li><li>Doorverwijzing als specialist niet nodig is</li></ul>
+            </div>
+            <div className="service-action">
+              <strong>Gratis</strong>
+              <button className="text-button" onClick={onIntake}>Start routecheck <Icon n="arrow" /></button>
+            </div>
           </article>
           <article className="recommended-service">
-            <span className="service-badge">MEEST GESCHIKT VOOR EEN AFGEBAKENDE VRAAG</span>
-            <p className="eyebrow">BELASTINGCHECK</p>
-            <h3>Vanaf €49 <small>excl. btw*</small></h3>
-            <p>Controle door een passende specialist, met bronnen en praktisch actieplan.</p>
-            <ul><li>Vaste prijs vooraf</li><li>Eén gerichte verduidelijkingsronde</li><li>Gecontroleerd antwoord</li></ul>
+            <span className="service-number">02</span>
+            <div className="service-copy">
+              <span className="service-badge">Voor een afgebakende vraag</span>
+              <p className="eyebrow">BELASTINGCHECK</p>
+              <h3>Zekerheid van een passende specialist.</h3>
+              <p>Controle door een passende specialist, met bronnen en praktisch actieplan.</p>
+              <ul><li>Vaste prijs vooraf</li><li>Eén gerichte verduidelijkingsronde</li><li>Gecontroleerd antwoord</li></ul>
+            </div>
+            <div className="service-action">
+              <strong>Vanaf €49 <small>excl. btw*</small></strong>
+              <span>Meest gekozen route</span>
+            </div>
           </article>
           <article>
             <span className="service-number">03</span>
-            <p className="eyebrow">SPECIALISTISCH ADVIES</p>
-            <h3>Vaste prijs</h3>
-            <p>Voor meer feiten, hoger risico of een korte deadline. U beslist pas na de prijs.</p>
-            <ul><li>Specialist op onderwerp</li><li>Scope en verantwoordelijkheid vastgelegd</li><li>Meerwerk alleen na akkoord</li></ul>
+            <div className="service-copy">
+              <p className="eyebrow">SPECIALISTISCH ADVIES</p>
+              <h3>Meer risico vraagt een scherpere scope.</h3>
+              <p>Voor meer feiten, hoger risico of een korte deadline. U beslist pas na de prijs.</p>
+              <ul><li>Specialist op onderwerp</li><li>Scope en verantwoordelijkheid vastgelegd</li><li>Meerwerk alleen na akkoord</li></ul>
+            </div>
+            <div className="service-action">
+              <strong>Vaste prijs vooraf</strong>
+              <span>Na inhoudelijke routecheck</span>
+            </div>
           </article>
         </div>
         <p className="price-note">* Dit zijn indicatieve prijzen in de MVP. In productie staat altijd het totale bedrag exclusief btw vóór betaling in beeld.</p>
@@ -1896,7 +2005,7 @@ function StructuredCase({
           <div className="card-label">VASTGESTELDE FEITEN</div>
           {item.facts.map((fact, i) => (
             <div className="fact-line" key={fact}>
-              <span className="fact-check">✓</span>
+              <span className="fact-check"><Icon n="check" /></span>
               <span>{fact}</span>
               <small>uit klanttekst</small>
             </div>
@@ -2301,7 +2410,7 @@ function Jobboard({
           <div>
             <p className="eyebrow">UW ADVISEURSPROFIEL</p>
             <h2>Mara van Dijk</h2>
-            <p className="muted">Loonheffingen-specialist · 4,8★ uit 27 reviews · actief</p>
+            <p className="muted">Loonheffingen-specialist · 4,8 van 5 uit 27 reviews · actief</p>
           </div>
           <div className="profile-details">
             <div><small>Specialisaties</small><b>Meerdere dienstbetrekkingen · werknemersverzekeringen · loonadministratie</b></div>
@@ -2428,6 +2537,8 @@ function CaseDetail({
   const [answer, setAnswer] = useState("");
   const [question, setQuestion] = useState("");
   const [claimMessage, setClaimMessage] = useState("Ik kan deze casus binnen één werkdag beoordelen en de broncontrole uitvoeren.");
+  const decision = caseDecision(item, role);
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   return (
     <section className="page">
       <div className="detail-head">
@@ -2444,6 +2555,30 @@ function CaseDetail({
         <h1>{item.title}</h1>
         <p className="detail-lead">{item.summary}</p>
       </div>
+      <section className={`case-decision${decision.action ? " needs-action" : ""}`} aria-labelledby="case-decision-title">
+        <div className="case-decision-copy">
+          <span>{decision.label}</span>
+          <h2 id="case-decision-title">{decision.title}</h2>
+          <p>{decision.description}</p>
+        </div>
+        <div className="case-decision-context" aria-label="Kerngegevens">
+          <span><small>Behandeltijd</small><b>{item.minutes}</b></span>
+          <span><small>{role === "advisor" ? "Vergoeding" : "Prijs bij controle"}</small><b>€{item.fee}</b></span>
+          <span><small>Ontbrekend</small><b>{item.missing} feit{item.missing === 1 ? "" : "en"}</b></span>
+        </div>
+        {decision.action === "pay" && (
+          <button className="button primary" onClick={pay}>Controle starten en mockbetaling uitvoeren <Icon n="lock" /></button>
+        )}
+        {decision.action === "specialist" && (
+          <button className="button primary" onClick={() => scrollTo("specialist-keuze")}>Bekijk de specialist <Icon n="arrow" /></button>
+        )}
+        {decision.action === "information" && (
+          <button className="button primary" onClick={() => scrollTo("aanvullende-informatie")}>Beantwoord de vraag <Icon n="arrow" /></button>
+        )}
+        {decision.action === "answer" && (
+          <button className="button primary" onClick={() => scrollTo("definitief-antwoord")}>Lees het antwoord <Icon n="arrow" /></button>
+        )}
+      </section>
       <div className="detail-layout">
         <div className="detail-content">
           <section className="section-block">
@@ -2539,7 +2674,7 @@ function CaseDetail({
             </p>
           </section>
           {customer && item.status === "DELIVERED" && item.finalAnswer && (
-            <section className="section-block final-delivery">
+            <section className="section-block final-delivery" id="definitief-antwoord">
               <div className="block-title">
                 <span>04</span>
                 <h2>Definitief gecontroleerd antwoord</h2>
@@ -2599,7 +2734,7 @@ function CaseDetail({
               </section>
             )}
           {customer && item.informationRequests?.at(-1) && (
-            <section className="section-block">
+            <section className="section-block" id="aanvullende-informatie">
               <div className="block-title">
                 <span>04</span>
                 <h2>Aanvullende informatie</h2>
@@ -2726,15 +2861,8 @@ function CaseDetail({
                 </button>
               </div>
             )}
-            {customer &&
-              (item.status === "AWAITING_PAYMENT" ||
-                item.status === "AWAITING_INFORMATION_PAYMENT") && (
-              <button className="button primary full" onClick={pay}>
-                Mockbetaling uitvoeren <Icon n="lock" />
-              </button>
-            )}
             {customer && item.status === "CLAIMED" && item.claims?.length ? (
-              <div className="claim-list">
+              <div className="claim-list" id="specialist-keuze">
                 <p className="eyebrow">SPECIALIST VOOR DEZE VRAAG</p>
                 <p className="claim-intro">Wij tonen eerst de beste inhoudelijke match. Alleen als er een reëel alternatief is, staat dat eronder.</p>
                 {[...item.claims]
@@ -2745,7 +2873,7 @@ function CaseDetail({
                     <span className="claim-rank">{index === 0 ? "AANBEVOLEN" : `ALTERNATIEF ${index}`}</span>
                     <b>{claim.expert_name}</b>
                     <span>
-                      {claim.expert_specialisation} · {claim.expert_rating.toFixed(1)}★ · {claim.match_score}% match
+                      {claim.expert_specialisation} · {claim.expert_rating.toFixed(1)} van 5 · {claim.match_score}% match
                     </span>
                     <small>{claim.message || "Beschikbaar voor deze casus."}</small>
                     <small className="verification-note"><Icon n="shield" /> Demo-profiel — identiteit, vakbekwaamheid en verzekering moeten vóór productie zijn geverifieerd.</small>
@@ -2792,18 +2920,23 @@ function CaseDetail({
             <strong>{nextStepForCase(item)}</strong>
             <span>De statusgeschiedenis hieronder laat zien wat al is afgerond.</span>
           </div>
-          <div className="timeline">
-            <p className="eyebrow">STATUSGESCHIEDENIS</p>
-            {item.history.map((h, i) => (
-              <div className="timeline-item" key={i}>
-                <span className={i === 0 ? "dot current" : "dot"} />
-                <div>
-                  <b>{h.label}</b>
-                  <small>{h.date}</small>
+          <details className="timeline timeline-disclosure">
+            <summary>
+              <span>STATUSGESCHIEDENIS</span>
+              <small>{item.history.length} momenten</small>
+            </summary>
+            <div className="timeline-list">
+              {item.history.map((h, i) => (
+                <div className="timeline-item" key={i}>
+                  <span className={i === 0 ? "dot current" : "dot"} />
+                  <div>
+                    <b>{h.label}</b>
+                    <small>{h.date}</small>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </details>
         </aside>
       </div>
     </section>
@@ -2824,11 +2957,12 @@ function Review({
     `Kort antwoord\n\nWat dit voor uw onderneming betekent\n\nWat u nu moet doen\n\nDeadline\n\nOnzekerheden en ontbrekende informatie\n\nBronnen\n\nWanneer extra hulp nodig is`,
   );
   const [checks, setChecks] = useState([true, false, false, false]);
+  const [verdict, setVerdict] = useState("");
   const toggle = (i: number) =>
     setChecks((current) =>
       current.map((value, index) => (index === i ? !value : value)),
     );
-  const canSubmit = checks.every(Boolean);
+  const canSubmit = checks.every(Boolean) && Boolean(verdict) && finalAnswer.trim().length >= 80 && notes.trim().length >= 20;
   const fillExample = () => {
     setFinalAnswer(
       `Kort antwoord\nDe conclusie uit het AI-concept is alleen bruikbaar nadat de onderliggende documenten zijn gecontroleerd.\n\nWat dit voor uw onderneming betekent\nEr kan een correctie of aangepaste verwerking nodig zijn; de precieze uitkomst hangt af van de bevestigde feiten.\n\nWat u nu moet doen\n1. Controleer de genoemde documenten.\n2. Leg de ontbrekende gegevens vast.\n3. Pas daarna de aangifte of administratie aan.\n\nDeadline\nHandel vóór de eerstvolgende aangifte- of reactiedatum.\n\nOnzekerheden en ontbrekende informatie\nDe relevante documenten zijn nog niet inhoudelijk geverifieerd.\n\nBronnen\n${item.source}.\n\nWanneer extra hulp nodig is\nLaat aanvullend beoordelen wanneer de documenten afwijken of de Belastingdienst al een standpunt heeft ingenomen.`,
@@ -2836,6 +2970,7 @@ function Review({
     setNotes(
       "De AI-conclusie is inhoudelijk bruikbaar, maar de loonstroken en jaaropgaven moeten worden gecontroleerd. De onzekerheid en vervolgstap zijn daarom expliciet aan de klant uitgelegd.",
     );
+    setVerdict("PARTIALLY_CORRECT");
     setChecks([true, true, true, true]);
   };
   return (
@@ -2868,10 +3003,24 @@ function Review({
               <em>AI-CONCEPT</em>
             </div>
             <p>{item.aiAnswer}</p>
-            <div className="review-choice">
-              <button>✓ Correct</button>
-              <button>Gedeeltelijk correct</button>
-              <button>Onvoldoende onderbouwd</button>
+            <div className="review-choice" role="group" aria-label="Oordeel over het AI-concept">
+              {[
+                ["CORRECT", "Correct"],
+                ["PARTIALLY_CORRECT", "Gedeeltelijk correct"],
+                ["INCORRECT", "Onjuist"],
+                ["INSUFFICIENT_SUPPORT", "Onvoldoende onderbouwd"],
+                ["MISSING_INFORMATION", "Ontbrekende informatie"],
+              ].map(([value, label]) => (
+                <button
+                  type="button"
+                  className={verdict === value ? "active" : ""}
+                  aria-pressed={verdict === value}
+                  onClick={() => setVerdict(value)}
+                  key={value}
+                >
+                  {verdict === value && <Icon n="check" />}{label}
+                </button>
+              ))}
             </div>
           </div>
           {item.externalAi && (
@@ -2939,8 +3088,8 @@ function Review({
                   items: [
                     {
                       dimension: "AI-conclusie",
-                      verdict: checks[0] ? "CORRECT" : "NEEDS_REVIEW",
-                      comment: "Controlepunten door adviseur vastgelegd.",
+                      verdict,
+                      comment: notes,
                     },
                   ],
                 })
@@ -2950,8 +3099,8 @@ function Review({
             </button>
             {!canSubmit && (
               <small className="review-blocked">
-                Vink alle vier controlepunten aan voordat u het antwoord
-                indient.
+                Kies een oordeel, vul de toelichting in en rond alle vier
+                controlepunten af voordat u het antwoord indient.
               </small>
             )}
           </div>
