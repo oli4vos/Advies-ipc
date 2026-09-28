@@ -27,7 +27,7 @@ def test_customer_upload_is_private_and_metadata_is_exposed_without_path(client,
     attachment = response.json()
     assert attachment["original_name"] == "aangifte.txt"
     assert attachment["size_bytes"] == len(b"fictieve inhoud")
-    assert attachment["scan_status"] == "LOCAL_BASIC_CHECKED"
+    assert attachment["scan_status"] == "CLEARED"
     assert attachment["sha256"]
     assert list((tmp_path / "private").rglob("*"))
     assert "aangifte.txt" not in str(next((tmp_path / "private").rglob("*")))
@@ -54,4 +54,21 @@ def test_upload_rejects_unsupported_extension(client, tmp_path, monkeypatch) -> 
     )
 
     assert response.status_code == 415
-    assert not (tmp_path / "private").exists()
+    private_root = tmp_path / "private"
+    assert not any(path.is_file() for path in private_root.rglob("*"))
+
+
+def test_local_scanner_rejects_eicar_test_signature(client, tmp_path, monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "storage_path", str(tmp_path / "private"))
+    created = client.post("/api/v1/cases", json=PAYLOAD).json()
+
+    response = client.post(
+        f"/api/v1/cases/{created['id']}/attachments",
+        files={"file": ("eicar.txt", b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE", "text/plain")},
+    )
+
+    assert response.status_code == 422
+    assert "EICAR" in response.json()["detail"]
+    private_root = tmp_path / "private"
+    assert not any(path.is_file() for path in private_root.rglob("*"))

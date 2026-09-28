@@ -31,6 +31,7 @@ def test_production_configuration_accepts_explicit_runtime_dependencies() -> Non
         auth_issuer="https://id.example/",
         auth_audience="fiscale-lijn-api",
         storage_mode="private",
+        malware_scanner="clamav",
     )
 
     settings.validate_runtime()

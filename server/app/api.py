@@ -54,6 +54,7 @@ from .services.marketplace import (
     request_information,
 )
 from .services.storage import store_private_upload
+from .services.malware import get_malware_scanner
 from .config import get_settings
 
 
@@ -69,11 +70,18 @@ async def upload_case_attachment(
 ) -> AttachmentRead:
     case = get_case_or_404(session, case_id)
     require_case_customer(actor, case)
+    settings = get_settings()
     original_name, storage_key, size_bytes, sha256 = await store_private_upload(
         file,
         case_id=case.id,
-        root=get_settings().storage_path,
+        root=settings.storage_path,
     )
+    stored_path = (Path(settings.storage_path).resolve() / storage_key).resolve()
+    scan_result = get_malware_scanner().scan(stored_path)
+    if scan_result.status != "CLEARED":
+        stored_path.unlink(missing_ok=True)
+        status_code = 422 if scan_result.status == "REJECTED" else 503
+        raise HTTPException(status_code=status_code, detail=f"Documentcontrole: {scan_result.detail}")
     attachment = models.CaseAttachment(
         case_id=case.id,
         uploaded_by=actor.user.id,
@@ -82,7 +90,7 @@ async def upload_case_attachment(
         content_type=file.content_type or "application/octet-stream",
         size_bytes=size_bytes,
         sha256=sha256,
-        scan_status="LOCAL_BASIC_CHECKED",
+        scan_status=scan_result.status,
     )
     session.add(attachment)
     session.flush()
@@ -93,7 +101,7 @@ async def upload_case_attachment(
             action="CASE_ATTACHMENT_STORED",
             object_type="CaseAttachment",
             object_id=attachment.id,
-            metadata_json={"case_id": case.id, "size_bytes": size_bytes, "scan_status": "LOCAL_BASIC_CHECKED"},
+            metadata_json={"case_id": case.id, "size_bytes": size_bytes, "scan_status": scan_result.status, "scanner": scan_result.scanner},
         )
     )
     session.commit()
@@ -127,7 +135,7 @@ def download_case_attachment(
         if case.status not in {"PAID", "IN_REVIEW", "NEEDS_INFORMATION", "ANSWER_SUBMITTED", "DELIVERED"}:
             raise HTTPException(status_code=403, detail="Document is nog niet beschikbaar voor deze adviseur")
 
-    if attachment.scan_status != "LOCAL_BASIC_CHECKED":
+    if attachment.scan_status != "CLEARED":
         raise HTTPException(status_code=423, detail="Document wacht op veiligheidscontrole")
 
     root = Path(get_settings().storage_path).resolve()

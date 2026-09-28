@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     ai_budget_cents: int = 0
     storage_mode: str = "local"
     storage_path: str = str(SERVER_ROOT / "private_uploads")
+    malware_scanner: str = "mock-local"
+    clamav_command: str = "clamdscan"
+    malware_scan_timeout_seconds: int = 10
     max_request_bytes: int = 1_048_576
 
     model_config = SettingsConfigDict(
@@ -79,6 +82,8 @@ class Settings(BaseSettings):
             errors.append("FISCALE_ALLOWED_HOSTS must contain explicit hosts")
         if self.storage_mode.lower() != "private":
             errors.append("FISCALE_STORAGE_MODE must be private")
+        if self.malware_scanner.lower() != "clamav":
+            errors.append("FISCALE_MALWARE_SCANNER must be clamav in staging/production")
         if self.max_request_bytes < 16_384:
             errors.append("FISCALE_MAX_REQUEST_BYTES is too small")
 

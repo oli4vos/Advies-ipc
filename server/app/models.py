@@ -197,7 +197,7 @@ class CaseAttachment(Base):
     content_type: Mapped[str] = mapped_column(String(120))
     size_bytes: Mapped[int] = mapped_column(Integer)
     sha256: Mapped[str] = mapped_column(String(64))
-    scan_status: Mapped[str] = mapped_column(String(32), default="NOT_SCANNED")
+    scan_status: Mapped[str] = mapped_column(String(32), default="PENDING_SCAN")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     case: Mapped[Case] = relationship(back_populates="attachments")
