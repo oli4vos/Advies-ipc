@@ -34,6 +34,10 @@ wat nog nodig is voordat een beperkte betaalde pilot kan starten.
   MFA-assurance claim (`aal2`). Dit is de afdwingingslaag; het koppelen van een
   echte identity-provider en TOTP-enrollment blijft een aparte configuratie- en
   acceptatietaak.
+- Lokale uploads lopen via `PENDING_SCAN` naar `CLEARED` of `REJECTED`. De
+  kosteloze lokale scanner detecteert bestandstype, grootte en de EICAR-test;
+  productie/staging moet `clamav` gebruiken voordat echte documenten worden
+  toegelaten. Alleen `CLEARED`-documenten zijn downloadbaar.
 
 ## Kostenloze uitvoeringsroute
 
