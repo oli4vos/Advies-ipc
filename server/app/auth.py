@@ -107,6 +107,11 @@ def _oidc_actor(session: Session, token: str) -> Actor:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Je account heeft nog geen toegestane platformrol.",
         )
+    if role in settings.mfa_required_role_set and claims.get("aal") != "aal2":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Voor deze platformrol is een bevestigde MFA-sessie vereist.",
+        )
 
     email = str(claims.get("email") or f"{subject}@auth.invalid")
     display_name = str(claims.get("name") or claims.get("preferred_username") or email)

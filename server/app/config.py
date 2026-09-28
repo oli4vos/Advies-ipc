@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     auth_jwks_url: str | None = None
     auth_issuer: str | None = None
     auth_audience: str | None = None
+    auth_mfa_required_roles: str = "ADMIN,ADVISOR"
     storage_mode: str = "local"
     max_request_bytes: int = 1_048_576
 
@@ -35,6 +36,14 @@ class Settings(BaseSettings):
     @property
     def allowed_host_list(self) -> list[str]:
         return [host.strip() for host in self.allowed_hosts.split(",") if host.strip()]
+
+    @property
+    def mfa_required_role_set(self) -> set[str]:
+        return {
+            role.strip().upper()
+            for role in self.auth_mfa_required_roles.split(",")
+            if role.strip()
+        }
 
     def validate_runtime(self) -> None:
         """Fail closed when the service is configured as staging/production.

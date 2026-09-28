@@ -17,7 +17,7 @@ from ..schemas import (
     InformationRequestRead,
     PaymentRead,
 )
-from .analysis import analyse
+from .ai_provider import get_case_analysis_provider
 from .anonymisation import anonymise
 
 
@@ -90,7 +90,8 @@ def create_case(session: Session, payload: CaseCreate, *, customer: models.User)
     anonymized_result = anonymise(payload.description)
     anonymized_title = anonymise(payload.title).text
     anonymized_question = anonymise(payload.question).text
-    analysis = analyse(
+    analysis_provider = get_case_analysis_provider()
+    analysis = analysis_provider.analyse(
         anonymized_text=anonymized_result.text,
         supplied_title=anonymized_title,
         supplied_question=anonymized_question,
@@ -161,6 +162,8 @@ def create_case(session: Session, payload: CaseCreate, *, customer: models.User)
     ai_execution = models.AIExecution(
         case_id=case.id,
         task_type="STRUCTURE_AND_DRAFT",
+        provider=analysis_provider.name,
+        model=analysis_provider.model,
         input_snapshot_hash=content_hash(payload.description),
         output_hash=content_hash(output_payload),
     )

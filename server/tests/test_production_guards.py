@@ -31,3 +31,10 @@ def test_production_configuration_accepts_explicit_runtime_dependencies() -> Non
     )
 
     settings.validate_runtime()
+
+
+def test_mfa_is_required_for_privileged_roles_by_default() -> None:
+    settings = Settings()
+
+    assert settings.mfa_required_role_set == {"ADMIN", "ADVISOR"}
+    assert "CUSTOMER" not in settings.mfa_required_role_set
