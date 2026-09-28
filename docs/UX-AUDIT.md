@@ -109,12 +109,24 @@ Beheerfuncties mogen uitgebreid zijn, maar horen niet in de klantflow te lekken.
 
 ## Volgende UX-blokken
 
-1. Intake progressive disclosure en demo-controls secundair maken — uitgevoerd in deze iteratie.
-2. De routecheck-resultaatpagina reduceren tot drie beslissingen: gratis verder, specialist nodig, of doorverwijzen.
-3. Prijs en extra vragen in één begrijpelijke scopekaart plaatsen voordat betaling mogelijk is.
-4. Empty-, loading-, fout- en herstelstates per hoofdscherm expliciet ontwerpen.
-5. Een vijf-gebruikers test uitvoeren met middelgrote ondernemers en adviseurs; meten waar iemand twijfelt, niet alleen of iemand kan klikken.
-6. Pas daarna visuele polish of extra animaties toevoegen.
+1. Intake progressive disclosure en demo-controls secundair maken — uitgevoerd.
+2. Iedere casus openen met één prominente beslissing of vervolgstap — uitgevoerd.
+3. Prijsroutes vervangen door één rustige, vergelijkbare routelijst — uitgevoerd.
+4. Adviseursoordelen als expliciete, machineleesbare classificatie vastleggen — uitgevoerd.
+5. Prijs, scope en eventuele extra vragen in één akkoordmoment samenbrengen.
+6. Loading-, netwerkfout- en herstelstates voor API-acties expliciet ontwerpen.
+7. Een vijf-gebruikers test uitvoeren met middelgrote ondernemers en adviseurs; meten waar iemand twijfelt, niet alleen of iemand kan klikken.
+8. Pas na die test extra visuele polish of animaties toevoegen.
+
+## Implementatiebeslissingen uit de tweede UX-iteratie
+
+- De casusdetailpagina begint met een beslisbalk die status, kerngegevens en maximaal één primaire actie combineert.
+- De statusgeschiedenis is beschikbaar via progressive disclosure en concurreert niet meer met de actuele taak.
+- De drie serviceniveaus zijn geen losse prijstegels meer, maar één redactionele routevergelijking.
+- De adviseur kiest nu expliciet uit `CORRECT`, `PARTIALLY_CORRECT`, `INCORRECT`, `INSUFFICIENT_SUPPORT` en `MISSING_INFORMATION`. Dit oordeel wordt als gestructureerd review-item opgeslagen.
+- Een definitief antwoord kan pas worden ingediend nadat oordeel, toelichting, antwoord en alle controlepunten compleet zijn.
+- De hoofdnavigatie toont de actieve omgeving en de merklink is volledig toetsenbordbedienbaar.
+- De publieke site heeft een eigen favicon, social metadata en een herstelbare 404-pagina.
 
 ## Wat we bewust niet doen
 
