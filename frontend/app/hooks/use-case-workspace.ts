@@ -33,10 +33,15 @@ export function useCaseWorkspace({
   fallbackCases,
   onNotice,
 }: WorkspaceOptions) {
-  const serverAuthoritative = hasLocalApi();
-  const [cases, setCases] = useState<CaseItem[]>(() =>
-    serverAuthoritative ? [] : fallbackCases,
-  );
+  // Keep the first server and browser render identical. The local API can
+  // only be detected in the browser, so switch to server-authoritative state
+  // after hydration rather than rendering a different tree immediately.
+  const [serverAuthoritative, setServerAuthoritative] = useState(false);
+  const [cases, setCases] = useState<CaseItem[]>(fallbackCases);
+
+  useEffect(() => {
+    setServerAuthoritative(hasLocalApi());
+  }, []);
 
   const reload = useCallback(
     async (activeRole: Role = role) => {
