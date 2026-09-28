@@ -38,6 +38,7 @@ from .services.cases import (
     create_case,
     get_case_or_404,
     list_cases,
+    list_selected_expert_cases,
     publish_case,
     claim_to_read,
     information_request_to_read,
@@ -257,10 +258,14 @@ def jobboard(
     session: Session = Depends(get_session), actor: Actor = Depends(get_current_actor)
 ) -> list[CaseListItem]:
     require_role(actor, "ADVISOR")
-    return [
-        case_to_list_item(case)
-        for case in list_cases(session, status_filter=["PUBLISHED", "CLAIMED"])
-    ]
+    cases = list_cases(session, status_filter=["PUBLISHED", "CLAIMED"])
+    known_ids = {case.id for case in cases}
+    cases.extend(
+        case
+        for case in list_selected_expert_cases(session, expert_id=actor.user.id)
+        if case.id not in known_ids
+    )
+    return [case_to_list_item(case) for case in cases]
 
 
 @router.get("/jobboard/{case_id}", response_model=CaseRead)
@@ -271,7 +276,11 @@ def jobboard_case(
 ) -> CaseRead:
     require_role(actor, "ADVISOR")
     case = get_case_or_404(session, case_id)
-    if case.status not in {"PUBLISHED", "CLAIMED"}:
+    selected_for_actor = any(
+        claim.expert_id == actor.user.id and claim.status == "SELECTED"
+        for claim in case.claims
+    )
+    if case.status not in {"PUBLISHED", "CLAIMED"} and not selected_for_actor:
         raise HTTPException(status_code=404, detail="Gepubliceerde casus niet gevonden")
     return case_to_read(case, include_original=False)
 

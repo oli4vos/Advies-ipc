@@ -570,3 +570,30 @@ def list_cases(
     if customer_id:
         statement = statement.where(models.Case.customer_id == customer_id)
     return list(session.scalars(statement).unique())
+
+
+def list_selected_expert_cases(session: Session, *, expert_id: str) -> list[models.Case]:
+    """Return cases selected for an expert, including active review statuses."""
+
+    statement = (
+        select(models.Case)
+        .join(models.ExpertClaim, models.ExpertClaim.case_id == models.Case.id)
+        .options(*CASE_LOAD_OPTIONS)
+        .where(
+            models.ExpertClaim.expert_id == expert_id,
+            models.ExpertClaim.status == "SELECTED",
+            models.Case.status.in_(
+                [
+                    "AWAITING_PAYMENT",
+                    "PAID",
+                    "IN_REVIEW",
+                    "NEEDS_INFORMATION",
+                    "AWAITING_INFORMATION_PAYMENT",
+                    "ANSWER_SUBMITTED",
+                    "DELIVERED",
+                ]
+            ),
+        )
+        .order_by(models.Case.created_at.desc())
+    )
+    return list(session.scalars(statement).unique())

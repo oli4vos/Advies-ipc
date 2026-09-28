@@ -150,6 +150,13 @@ def test_claim_selection_payment_and_expert_review_flow(client) -> None:
     assert selected.json()["status"] == "AWAITING_PAYMENT"
     assert selected.json()["payment"]["status"] == "PENDING"
 
+    assigned_board = client.get("/api/v1/jobboard", headers=ADVISOR_HEADERS)
+    assert assigned_board.status_code == 200
+    assert [item["id"] for item in assigned_board.json()] == [case_id]
+    assigned_detail = client.get(f"/api/v1/jobboard/{case_id}", headers=ADVISOR_HEADERS)
+    assert assigned_detail.status_code == 200
+    assert assigned_detail.json()["status"] == "AWAITING_PAYMENT"
+
     paid = client.post(f"/api/v1/cases/{case_id}/pay")
     assert paid.status_code == 200, paid.text
     assert paid.json()["status"] == "PAID"
