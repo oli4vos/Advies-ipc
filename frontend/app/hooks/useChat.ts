@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { createCase, hasLocalApi, type ApiCase } from '../lib/api'
+import {
+  createCase,
+  hasLocalApi,
+  uploadCaseAttachment,
+  type ApiCase,
+} from '../lib/api'
 import type { ChatMessageRecord } from '../lib/chat-model'
 
 function routeCheckSummary(result: ApiCase) {
@@ -27,6 +32,8 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [createdCaseCode, setCreatedCaseCode] = useState<string | null>(null)
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return
@@ -69,6 +76,31 @@ export function useChat() {
         external_ai_answer: '',
       })
       setCreatedCaseCode(result.public_code)
+      setActiveCaseId(result.id)
+
+      if (pendingFile) {
+        try {
+          const attachment = await uploadCaseAttachment(result.id, pendingFile)
+          setMessages(previous => [
+            ...previous,
+            {
+              id: `${Date.now()}-attachment`,
+              role: 'ai',
+              content: `Document ${attachment.original_name} is lokaal gecontroleerd en veilig opgeslagen. Scanstatus: ${attachment.scan_status}.`,
+              timestamp: new Date(),
+            },
+          ])
+        } catch (uploadError) {
+          setError(
+            uploadError instanceof Error
+              ? uploadError.message
+              : 'Het document kon niet veilig worden opgeslagen.',
+          )
+          toast.error('Documentcontrole mislukt')
+        } finally {
+          setPendingFile(null)
+        }
+      }
 
       setMessages(previous => [
         ...previous,
@@ -87,7 +119,7 @@ export function useChat() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [pendingFile])
 
   const uploadFile = useCallback(async (file: File) => {
     if (!file) return
@@ -107,22 +139,63 @@ export function useChat() {
       return
     }
 
-    setMessages(previous => [
-      ...previous,
-      {
-        id: `${Date.now()}-file`,
-        role: 'user',
-        content: `📎 ${file.name} geselecteerd. Het bestand wordt in deze versie niet geüpload.`,
-        timestamp: new Date(),
-      },
-    ])
-    toast.success('Bestand lokaal geselecteerd')
-  }, [])
+    if (!hasLocalApi()) {
+      setMessages(previous => [
+        ...previous,
+        {
+          id: `${Date.now()}-file`,
+          role: 'user',
+          content: `📎 ${file.name} geselecteerd. In de publieke demo wordt dit bestand niet doorgestuurd.`,
+          timestamp: new Date(),
+        },
+      ])
+      toast.success('Demo-bestand geselecteerd')
+      return
+    }
+
+    if (!activeCaseId) {
+      setPendingFile(file)
+      setMessages(previous => [
+        ...previous,
+        {
+          id: `${Date.now()}-file`,
+          role: 'user',
+          content: `📎 ${file.name} klaar voor upload. Verstuur eerst je belastingvraag; daarna controleert de lokale scanner het document.`,
+          timestamp: new Date(),
+        },
+      ])
+      toast.success('Document klaar voor upload')
+      return
+    }
+
+    try {
+      const attachment = await uploadCaseAttachment(activeCaseId, file)
+      setMessages(previous => [
+        ...previous,
+        {
+          id: `${Date.now()}-file`,
+          role: 'ai',
+          content: `Document ${attachment.original_name} is lokaal gecontroleerd en veilig opgeslagen. Scanstatus: ${attachment.scan_status}.`,
+          timestamp: new Date(),
+        },
+      ])
+      toast.success('Document veilig opgeslagen')
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : 'Het document kon niet veilig worden opgeslagen.',
+      )
+      toast.error('Documentcontrole mislukt')
+    }
+  }, [activeCaseId])
 
   const clearMessages = useCallback(() => {
     setMessages([])
     setError(null)
     setCreatedCaseCode(null)
+    setActiveCaseId(null)
+    setPendingFile(null)
   }, [])
 
   return {

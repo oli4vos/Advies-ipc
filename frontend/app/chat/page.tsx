@@ -180,7 +180,7 @@ export default function ChatPage() {
 
         <div className="mt-3 text-xs text-gray-500">
           <p>
-            <strong>Disclaimer:</strong> Dit is een routecheck en geen zelfstandig belastingadvies. Een definitief antwoord vereist controle door een passende specialist. Bestanden worden in deze versie niet geüpload.
+            <strong>Disclaimer:</strong> Dit is een routecheck en geen zelfstandig belastingadvies. Een definitief antwoord vereist controle door een passende specialist. In de lokale MVP worden toegestane bestanden privé opgeslagen en eerst lokaal op veiligheid gecontroleerd; op GitHub Pages wordt niets doorgestuurd.
           </p>
         </div>
       </div>

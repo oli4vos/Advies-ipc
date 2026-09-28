@@ -13,18 +13,18 @@ export function FileUpload({ onUpload, disabled = false }: FileUploadProps) {
   const handleFileSelect = (file: File) => {
     if (disabled) return
 
-    // Validate file size (20MB)
-    if (file.size > 20 * 1024 * 1024) {
-      alert('Bestand is te groot. Maximum 20MB.')
+    // Keep the browser limit aligned with the private backend storage limit.
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Bestand is te groot. Maximum 10MB.')
       return
     }
 
     // Validate file type
-    const allowedTypes = ['pdf', 'doc', 'docx', 'txt']
+    const allowedTypes = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'txt']
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
 
     if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-      alert('Bestandstype niet ondersteund. Gebruik PDF, DOC, DOCX of TXT.')
+      alert('Bestandstype niet ondersteund. Gebruik PDF, DOC, DOCX, PNG, JPG of TXT.')
       return
     }
 
@@ -82,7 +82,7 @@ export function FileUpload({ onUpload, disabled = false }: FileUploadProps) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        title="Upload document (PDF, DOC, DOCX, TXT)"
+        title="Upload document (PDF, DOC, DOCX, PNG, JPG, TXT)"
       >
         <DocumentArrowUpIcon className="h-5 w-5 text-gray-600" />
       </button>
@@ -90,7 +90,7 @@ export function FileUpload({ onUpload, disabled = false }: FileUploadProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.txt"
+        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
         onChange={handleFileInputChange}
         className="hidden"
       />
