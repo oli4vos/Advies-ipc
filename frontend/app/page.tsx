@@ -838,8 +838,10 @@ export default function Home() {
     <main id="main-content">
       <div className="demo-guard">
         <Icon n="shield" />
-        <strong>Publieke demo — voer geen echte bedrijfs- of persoonsgegevens in.</strong>
-        <span>Opslag in deze browser · geen beveiligde productieomgeving.</span>
+        <div className="demo-guard-copy">
+          <strong>Publieke demo</strong>
+          <span>Gebruik alleen fictieve bedrijfs- en persoonsgegevens.</span>
+        </div>
         <label className="demo-role-select">
           <span>Bekijk demo als</span>
           <select value={role} onChange={(e) => changeRole(e.target.value as Role)}>
@@ -848,9 +850,15 @@ export default function Home() {
             <option value="admin">Beheerder</option>
           </select>
         </label>
-        <button className="demo-reset" onClick={resetDemo}>
-          Demo resetten
-        </button>
+        <details className="demo-tools">
+          <summary>Demo-instellingen</summary>
+          <div className="demo-tools-panel">
+            <span>Opslag in deze browser · geen beveiligde productieomgeving.</span>
+            <button className="demo-reset" onClick={resetDemo}>
+              Demo resetten
+            </button>
+          </div>
+        </details>
       </div>
       <header className="topbar">
         <div className="brand" onClick={() => setView("home")}>
@@ -1355,7 +1363,7 @@ function DemoFlow({
           : 1;
 
   return (
-    <div className="demo-flow" aria-label="Voortgang in demomodus">
+    <div className={`demo-flow ${role}${view === "home" ? " is-home" : ""}`} aria-label="Voortgang in demomodus">
       <div className="demo-flow-inner">
         <span className="demo-flow-label">{role === "customer" ? "KLANT" : role === "advisor" ? "ADVISEUR" : "BEHEERDER"} · DEMO</span>
         <div className="demo-flow-steps">
@@ -1498,7 +1506,7 @@ function HomeView({
     <>
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">BELASTINGHULP VOOR HET MKB · PUBLIEKE DEMO</p>
+          <p className="eyebrow">BELASTINGHULP VOOR HET MKB</p>
           <h1>
             Een belastingvraag in uw bedrijf? <em>We maken duidelijk wat u moet doen.</em>
           </h1>
@@ -1557,10 +1565,8 @@ function HomeView({
           {[
             ["Btw & facturen", "Tarief, aftrek, vrijstelling of een factuur naar het buitenland."],
             ["Personeel & loon", "Loonheffingen, vergoedingen, auto van de zaak of een buitenlandse werknemer."],
-            ["Winst & aangifte", "Zakelijke kosten, eerste jaar ondernemen of een onverwachte aanslag."],
-            ["BV & ondernemen", "Vennootschapsbelasting, dga-vragen of geld tussen privé en de bv."],
+            ["Kosten & aangifte", "Zakelijke kosten, aftrekposten of een onverwachte aanslag."],
             ["Brief of deadline", "Een brief, controle, naheffing of bezwaar waarop u moet reageren."],
-            ["Ik weet het niet", "Geen probleem. Wij bepalen eerst waar uw vraag thuishoort."],
           ].map(([title, text], index) => (
             <button className="situation-card" key={title} onClick={onIntake}>
               <span>0{index + 1}</span>
@@ -2079,68 +2085,76 @@ function Intake({
             samenvatting te maken.
           </small>
         </label>
-        <div className="form-grid">
-          <label>
-            Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Btw op advies en online training")} label="Voorbeeld" />
-            <input
-              value={form.title}
-              onChange={(e) => set("title", e.target.value)}
-              placeholder="Bijv. btw op online training"
-            />
-          </label>
-          <label>
-            Waar lijkt uw vraag over te gaan? <small>optioneel</small>
-            <select
-              value={form.category}
-              onChange={(e) => set("category", e.target.value)}
-            >
-              <option>Weet ik niet</option>
-              <option value="Btw">Btw & facturen</option>
-              <option value="Loonheffingen">Personeel & loon</option>
-              <option value="Inkomstenbelasting">Winst & inkomstenbelasting</option>
-              <option value="Vennootschapsbelasting">BV & vennootschapsbelasting</option>
-              <option value="Internationaal">Internationaal ondernemen</option>
-              <option value="Bezwaar">Brief, aanslag of bezwaar</option>
-            </select>
-          </label>
-        </div>
-          <label>
-            Als u één ding zeker wilt weten <small>optioneel</small> <ExampleButton onClick={() => set("question", "Welk btw-tarief geldt en hoe verwerk ik dit op de factuur en aangifte?")} label="Voorbeeld" />
-          <textarea
-            rows={3}
-            value={form.question}
-            onChange={(e) => set("question", e.target.value)}
-            placeholder="Schrijf dit alleen als u het al scherp heeft. Anders structureren wij dit later."
-          />
-        </label>
-        <div className="form-grid">
-          <label>
-            Belastingjaar <small>optioneel</small>
-            <select
-              value={form.year}
-              onChange={(e) => set("year", e.target.value)}
-            >
-              <option>2025</option>
-              <option>2024</option>
-              <option>2026</option>
-              <option>Weet ik niet</option>
-            </select>
-          </label>
-          <label>
-            Type klant <small>optioneel</small>
-            <select
-              value={form.clientType}
-              onChange={(e) => set("clientType", e.target.value)}
-            >
-              <option>Eenmanszaak</option>
-              <option>Bv</option>
-              <option>Werkgever</option>
-              <option>Stichting/vereniging</option>
-              <option>Particulier</option>
-              <option>Weet ik niet</option>
-            </select>
-          </label>
-        </div>
+        <details className="intake-more">
+          <summary>
+            <span>Meer details toevoegen <small>optioneel</small></span>
+            <span className="intake-more-hint">Wij vullen dit later ook aan</span>
+          </summary>
+          <div className="intake-more-body">
+            <div className="form-grid">
+              <label>
+                Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Btw op advies en online training")} label="Voorbeeld" />
+                <input
+                  value={form.title}
+                  onChange={(e) => set("title", e.target.value)}
+                  placeholder="Bijv. btw op online training"
+                />
+              </label>
+              <label>
+                Waar lijkt uw vraag over te gaan? <small>optioneel</small>
+                <select
+                  value={form.category}
+                  onChange={(e) => set("category", e.target.value)}
+                >
+                  <option>Weet ik niet</option>
+                  <option value="Btw">Btw & facturen</option>
+                  <option value="Loonheffingen">Personeel & loon</option>
+                  <option value="Inkomstenbelasting">Winst & inkomstenbelasting</option>
+                  <option value="Vennootschapsbelasting">BV & vennootschapsbelasting</option>
+                  <option value="Internationaal">Internationaal ondernemen</option>
+                  <option value="Bezwaar">Brief, aanslag of bezwaar</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Als u één ding zeker wilt weten <small>optioneel</small> <ExampleButton onClick={() => set("question", "Welk btw-tarief geldt en hoe verwerk ik dit op de factuur en aangifte?")} label="Voorbeeld" />
+              <textarea
+                rows={3}
+                value={form.question}
+                onChange={(e) => set("question", e.target.value)}
+                placeholder="Schrijf dit alleen als u het al scherp heeft. Anders structureren wij dit later."
+              />
+            </label>
+            <div className="form-grid">
+              <label>
+                Belastingjaar <small>optioneel</small>
+                <select
+                  value={form.year}
+                  onChange={(e) => set("year", e.target.value)}
+                >
+                  <option>2025</option>
+                  <option>2024</option>
+                  <option>2026</option>
+                  <option>Weet ik niet</option>
+                </select>
+              </label>
+              <label>
+                Type klant <small>optioneel</small>
+                <select
+                  value={form.clientType}
+                  onChange={(e) => set("clientType", e.target.value)}
+                >
+                  <option>Eenmanszaak</option>
+                  <option>Bv</option>
+                  <option>Werkgever</option>
+                  <option>Stichting/vereniging</option>
+                  <option>Particulier</option>
+                  <option>Weet ik niet</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </details>
         <label className="external">
           <span>
             AI-antwoord dat u al elders heeft gekregen <small>optioneel</small> <ExampleButton onClick={() => set("externalAi", "Een eerder AI-antwoord zei dat online onderwijs altijd is vrijgesteld van btw, maar noemde geen voorwaarden of bron. Kunnen jullie dit controleren?")} label="Voorbeeld" />
