@@ -893,7 +893,6 @@ export default function Home() {
           onIntake={() => setView("intake")}
           onDashboard={() => setView("dashboard")}
           onAdvisor={() => changeRole("advisor")}
-          onInvestor={() => setView("businesscase")}
           onPolicy={(policy) => setView(policy)}
           open={open}
           cases={cases}
@@ -980,7 +979,7 @@ export default function Home() {
   );
 }
 
-function BusinessCase() {
+export function BusinessCase({ standalone = false }: { standalone?: boolean } = {}) {
   const [scenario, setScenario] = useState<PitchScenario>("base");
   const assumptions = pitchScenarios[scenario];
   const rows = pitchYears.map((item) => {
@@ -1002,6 +1001,24 @@ function BusinessCase() {
     maxArr = Math.max(...rows.map((row) => row.arr));
   return (
     <section className="investor-page">
+      <nav className="pitch-nav" aria-label="Investeerderspagina">
+        <a className="pitch-brand" href={standalone ? "../" : "./"}>
+          <span className="brand-mark">F</span>
+          <span>
+            <b>fiscale lijn</b>
+            <small>investeerderscase</small>
+          </span>
+        </a>
+        <div className="pitch-nav-links">
+          <a href="#model">Model</a>
+          <a href="#markttoegang">Markttoegang</a>
+          <a href="#economie">Economie</a>
+          <a href="#bewijsplan">Bewijsplan</a>
+        </div>
+        <a className="pitch-product-link" href={standalone ? "../" : "./"}>
+          Bekijk product <Icon n="arrow" />
+        </a>
+      </nav>
       <div className="pitch-hero">
         <div className="pitch-copy">
           <p className="eyebrow">INVESTEERDERSCASE / MANAGEMENTAANNAMES</p>
@@ -1046,7 +1063,7 @@ function BusinessCase() {
         </aside>
       </div>
 
-      <div className="problem-model">
+      <div className="problem-model" id="model">
         <div className="pitch-problem">
           <p className="eyebrow">HET PROBLEEM</p>
           <h2>
@@ -1092,7 +1109,38 @@ function BusinessCase() {
         </div>
       </div>
 
-      <section className="economics-section">
+      <section className="market-entry" id="markttoegang">
+        <div className="market-entry-copy">
+          <p className="eyebrow">WAAROM NU / EERSTE MARKT</p>
+          <h2>Begin smal waar de vraag herhaalbaar en de waarde direct zichtbaar is.</h2>
+          <p>
+            De hypothese is niet dat AI de fiscalist vervangt. AI verlaagt de
+            voorbereidingslast, terwijl een gekwalificeerde specialist het
+            oordeel geeft. De eerste wedge is daarom afgebakende btw- en
+            werkgeversvragen van mkb-ondernemers: frequent genoeg om patronen
+            te leren, specifiek genoeg voor uitlegbare matching.
+          </p>
+        </div>
+        <div className="market-entry-path" aria-label="Go-to-market in drie fasen">
+          <article>
+            <span>01 / VRAAG</span>
+            <strong>MKB met een concrete belastingbeslissing</strong>
+            <p>Start bij btw, bedrijfskosten en loonheffingen; geen brede adviestrajecten.</p>
+          </article>
+          <article>
+            <span>02 / DISTRIBUTIE</span>
+            <strong>Boekhouders en salarisadministrateurs als vertrouwenskanaal</strong>
+            <p>Zij signaleren de vraag, maar hebben niet altijd de specialistische capaciteit.</p>
+          </article>
+          <article>
+            <span>03 / AANBOD</span>
+            <strong>Geverifieerde NOB- en RB-specialisten</strong>
+            <p>Gerichte opdrachten, minder acquisitie en een hogere waarde per gewerkt uur.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="economics-section" id="economie">
         <div className="section-head">
           <div>
             <p className="eyebrow">UNIT ECONOMICS / BASISSCENARIO</p>
@@ -1208,7 +1256,28 @@ function BusinessCase() {
         </p>
       </section>
 
-      <div className="milestone-grid">
+      <section className="evidence-section" aria-labelledby="evidence-title">
+        <div>
+          <p className="eyebrow">FASE VAN HET BEDRIJF</p>
+          <h2 id="evidence-title">Werkend productconcept; commerciële aannames nog te bewijzen.</h2>
+        </div>
+        <dl className="evidence-ledger">
+          <div>
+            <dt>Gebouwd</dt>
+            <dd>End-to-end demo van intake, anonimisering, matching, betaling en expert-review.</dd>
+          </div>
+          <div>
+            <dt>Te valideren</dt>
+            <dd>Betalingsbereidheid, herhaalgebruik, doorlooptijd en actieve specialistendichtheid.</dd>
+          </div>
+          <div>
+            <dt>Investeringspoort</dt>
+            <dd>Pas opschalen wanneer klanttevredenheid én bijdrage per casus reproduceerbaar zijn.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <div className="milestone-grid" id="bewijsplan">
         <section>
           <p className="eyebrow">UITVOERINGSPLAN</p>
           <h2>Bewijs vóór schaal.</h2>
@@ -1316,6 +1385,18 @@ function BusinessCase() {
           </span>
         </div>
       </div>
+      <section className="pitch-close">
+        <p className="eyebrow">DE INVESTERINGSTHESE</p>
+        <h2>Maak specialistische belastingkennis per vraag bereikbaar — en bouw met iedere menselijke review een beter kwaliteitsnetwerk.</h2>
+        <div>
+          <span>Indicatieve ronde</span>
+          <strong>€250.000 pre-seed</strong>
+          <small>Onder voorbehoud van pilotvalidatie, juridische inrichting en definitieve begroting.</small>
+        </div>
+        <a className="button primary" href={standalone ? "../" : "./"}>
+          Bekijk het werkende product <Icon n="arrow" />
+        </a>
+      </section>
       <footer>
         <span>fiscale lijn</span>
         <span>Investeerderscase · managementversie · september 2026</span>
@@ -1602,7 +1683,6 @@ function CustomerDashboard({ cases, open, onIntake }: { cases: CaseItem[]; open:
 function HomeView({
   onIntake,
   onAdvisor,
-  onInvestor,
   onPolicy,
   onDashboard,
   open,
@@ -1610,7 +1690,6 @@ function HomeView({
 }: {
   onIntake: () => void;
   onAdvisor: () => void;
-  onInvestor: () => void;
   onPolicy: (policy: "privacy" | "terms" | "quality") => void;
   onDashboard: () => void;
   open: (id: string) => void;
@@ -1820,7 +1899,7 @@ function HomeView({
         </div>
         <div className="footer-links secondary-links" aria-label="Andere omgevingen">
           <button onClick={onAdvisor}>Voor adviseurs</button>
-          <button onClick={onInvestor}>Voor investeerders</button>
+          <a href="investeerders/">Voor investeerders</a>
         </div>
         <span className="footer-disclaimer">Publieke demo · geen professioneel advies of beveiligde productieomgeving · 2026</span>
       </footer>
