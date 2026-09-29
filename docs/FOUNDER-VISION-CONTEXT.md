@@ -4,6 +4,10 @@ Status: richtinggevend voor product-, data- en go-to-marketbesluiten<br>
 Bron: beantwoording door oprichter, 25 september 2026<br>
 Gebruik: toekomstige agents lezen dit naast `AGENTS.md`, `PRODUCT-STRATEGY.md` en `ARCHITECTURE-BLUEPRINT.md` voordat zij keuzes maken die scope, prijs, vertrouwen, data of groei raken.
 
+Langetermijnideeën die nog geen productbesluit zijn, staan apart in
+`FUTURE-IDEAS.md`. Daaronder valt de mogelijke ontwikkeling van Fiscale Lijn
+tot aanvullende professionele erkenning of een onafhankelijk kwaliteitsregister.
+
 Dit document is geen juridisch, fiscaal of privacyadvies. Waar visie raakt aan regelgeving staat de benodigde validatie expliciet vermeld.
 
 ## Samenvatting in één zin
