@@ -1927,13 +1927,18 @@ function HomeView({
       <footer className="site-footer">
         <div className="footer-brand"><strong>fiscale lijn</strong><span>Belastinghulp voor het mkb</span></div>
         <div className="footer-links" aria-label="Informatie">
+          <strong className="footer-heading">Informatie</strong>
           <button onClick={() => onPolicy("privacy")}>Privacy</button>
           <button onClick={() => onPolicy("terms")}>Platformrol & voorwaarden</button>
           <button onClick={() => onPolicy("quality")}>Kwaliteit & klachten</button>
         </div>
-        <div className="footer-links secondary-links" aria-label="Andere omgevingen">
+        <div className="footer-links secondary-links" aria-label="Alle pagina's">
+          <strong className="footer-heading">Alle pagina&apos;s</strong>
           <button onClick={onAdvisor}>Voor adviseurs</button>
+          <a href="chat/">Eerste beoordeling via chat</a>
           <a href="investeerders/">Voor investeerders</a>
+          <a href="partners/nob/">Voorstel voor de NOB</a>
+          <a href="partners/rb/">Voorstel voor het RB</a>
         </div>
         <span className="footer-disclaimer">Publieke demo · geen professioneel advies of beveiligde productieomgeving · 2026</span>
       </footer>
