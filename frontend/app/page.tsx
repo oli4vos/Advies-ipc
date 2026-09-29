@@ -1033,6 +1033,17 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             beoordeelbaar; AI ondersteunt de vooranalyse en een passende
             specialist blijft verantwoordelijk voor het eindantwoord.
           </p>
+          <div className="pitch-value-statement">
+            <span>KERNBELOFTE</span>
+            <strong>
+              Sneller betaalbare belastingzekerheid voor ondernemers. Genoeg
+              passend werk voor fiscalisten om specialist te worden én te blijven.
+            </strong>
+            <p>
+              Fiscale Lijn bundelt versnipperde vragen per vakgebied en brengt
+              iedere afgebakende casus naar de fiscalist met de juiste diepgang.
+            </p>
+          </div>
           <div className="pitch-tags">
             <span>Marketplace</span>
             <span>Human-in-the-loop</span>
@@ -1067,14 +1078,16 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
         <div className="pitch-problem">
           <p className="eyebrow">HET PROBLEEM</p>
           <h2>
-            De dure tijd van een fiscalist verdwijnt nu in het ordenen van
-            rommelige input.
+            Klanten verwachten snelheid. Fiscalisten moeten specialiseren. De
+            markt brengt die twee nog niet efficiënt samen.
           </h2>
           <p>
-            Ondernemers weten niet welke feiten of belastingsoort relevant zijn. Adviseurs moeten
-            eerst een dossier uitpluizen voordat zij prijs, risico en expertise
-            kunnen beoordelen. Daardoor zijn afgebakende belastingvragen te traag en
-            relatief duur.
+            Een fiscalist kan niet op ieder onderwerp actuele diepgang blijven
+            bieden. Tegelijk krijgt een individuele praktijk vaak te weinig
+            gelijksoortige casussen om een specialisme versneld op te bouwen en
+            scherp te houden. Ondernemers betalen ondertussen voor intake en
+            zoektijd, terwijl zij vooral snel zekerheid over één concrete vraag
+            nodig hebben.
           </p>
         </div>
         <div className="model-steps">
@@ -1118,7 +1131,8 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             voorbereidingslast, terwijl een gekwalificeerde specialist het
             oordeel geeft. De eerste wedge is daarom afgebakende btw- en
             werkgeversvragen van mkb-ondernemers: frequent genoeg om patronen
-            te leren, specifiek genoeg voor uitlegbare matching.
+            te leren, specifiek genoeg voor uitlegbare matching en gebundeld
+            genoeg om duurzame specialistische praktijken te voeden.
           </p>
         </div>
         <div className="market-entry-path" aria-label="Go-to-market in drie fasen">
@@ -1387,7 +1401,13 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
       </div>
       <section className="pitch-close">
         <p className="eyebrow">DE INVESTERINGSTHESE</p>
-        <h2>Maak specialistische belastingkennis per vraag bereikbaar — en bouw met iedere menselijke review een beter kwaliteitsnetwerk.</h2>
+        <h2>De toekomst is geen generalist voor iedere vraag, maar de juiste specialist op het juiste moment.</h2>
+        <p className="pitch-close-thesis">
+          Fiscale Lijn maakt die toekomst schaalbaar: snelle en betaalbare
+          zekerheid voor klanten, een voorspelbaarder volume passend werk voor
+          fiscalisten en een kwaliteitsnetwerk dat met iedere menselijke review
+          beter wordt.
+        </p>
         <div>
           <span>Indicatieve ronde</span>
           <strong>€250.000 pre-seed</strong>
