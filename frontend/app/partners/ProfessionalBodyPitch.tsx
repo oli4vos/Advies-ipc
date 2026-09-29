@@ -9,11 +9,18 @@ type BodyConfig = {
   shortName: string;
   proposition: string;
   context: string;
+  ask: string;
+  evidence: Array<{ label: string; value: string; text: string }>;
   associationValue: Array<{ title: string; text: string }>;
   memberValue: Array<{ title: string; text: string }>;
   verification: Array<{ title: string; text: string }>;
   safeguards: string[];
   pilot: string[];
+  economics?: {
+    title: string;
+    figures: Array<{ label: string; value: string }>;
+    note: string;
+  };
   sources: Array<{ label: string; note: string; href: string }>;
 };
 
@@ -23,9 +30,28 @@ const bodies: Record<BodyKey, BodyConfig> = {
     name: "Nederlandse Orde van Belastingadviseurs",
     shortName: "NOB",
     proposition:
-      "Maak actueel NOB-lidmaatschap een gecontroleerde toegangseis voor specialistische opdrachten via het platform.",
+      "Maak professionele kwaliteit zichtbaar wanneer een ondernemer een specialist kiest.",
     context:
-      "De NOB borgt professionele erkenning met toelatingseisen, beroepsregels, permanente educatie, jaarlijkse toetsing en tuchtrecht. Fiscale Lijn wil dit kwaliteitssysteem niet kopiëren of de indruk wekken dat het van ons is. Wij willen de lidmaatschapsstatus onder regie van de NOB controleren en zichtbaar maken.",
+      "AI versnelt fiscaal werk, maar professioneel oordeel blijft mensenwerk. Fiscale Lijn wil samen met de NOB toetsen hoe onafhankelijkheid, deskundigheid, vertrouwelijkheid en menselijke eindverantwoordelijkheid aantoonbaar blijven in een digitale adviesketen.",
+    ask:
+      "Ontwerp met ons een besloten proef waarin NOB-status gecontroleerd wordt en beroepsregels zichtbaar doorwerken in iedere opdracht.",
+    evidence: [
+      {
+        label: "AANLEIDING",
+        value: "AI is praktijk",
+        text: "De NOB concludeerde in september 2026 dat AI een vaste plek heeft in de fiscale praktijk en dat leden behoefte hebben aan concrete handvatten en casuïstiek.",
+      },
+      {
+        label: "KADER",
+        value: "Onafhankelijkheid eerst",
+        text: "Nieuwe samenwerkingsvormen worden onder de algemene onafhankelijkheidsnorm beoordeeld. Dat opent een gesprek, maar is geen goedkeuring van dit platform.",
+      },
+      {
+        label: "VOORSTEL",
+        value: "Klein en omkeerbaar",
+        text: "Een proef met vrijwillige zelfstandigen en kleine kantoren, zonder logo of publieke keurmerkclaim en met een gezamenlijk stoprecht.",
+      },
+    ],
     associationValue: [
       {
         title: "Kwaliteit zichtbaar op het beslismoment",
@@ -36,8 +62,8 @@ const bodies: Record<BodyKey, BodyConfig> = {
         text: "Samengevoegde signalen die niet tot klanten te herleiden zijn, tonen welke specialismen, ontbrekende feiten en AI-risico’s in de praktijk terugkeren.",
       },
       {
-        title: "Grip op de opkomst van digitale platforms",
-        text: "De NOB kan vooraf regels stellen voor onafhankelijkheid, geheimhouding, AI-gebruik, presentatie en ingrijpen bij problemen, in plaats van achteraf op marktpraktijken te reageren.",
+        title: "Praktijkkennis over verantwoorde AI",
+        text: "De proef laat concreet zien waar AI-concepten worden gecorrigeerd en welke waarborgen leden nodig hebben, zonder klantdossiers automatisch als trainingsdata te gebruiken.",
       },
     ],
     memberValue: [
@@ -80,10 +106,10 @@ const bodies: Record<BodyKey, BodyConfig> = {
       "De NOB krijgt een vast meldpunt, informatie voor controles en een snelle route voor misbruik van de ledenstatus.",
     ],
     pilot: [
-      "Gezamenlijk de toegestane ledenvermelding, doelgroep en uitsluitingsgronden vaststellen.",
-      "Een kleine besloten proef met vrijwillige leden uit twee afgebakende specialismen.",
-      "Vooraf meetpunten afspreken: kwaliteit, onafhankelijkheid, klantbegrip, doorlooptijd en waarde voor leden.",
-      "Na evaluatie pas besluiten over merkgebruik, vaste controle van het lidmaatschap en eventuele bredere invoering.",
+      "20–30 vrijwillige zelfstandige leden en kleine kantoren die bevoegd en verzekerd zijn om opdrachten aan te nemen.",
+      "Drie maanden, met omzetbelasting en loonheffingen als afgebakende eerste onderwerpen.",
+      "Meten: passendheid, bespaarde intaketijd, klantbegrip, correcties op AI-uitvoer en kwaliteits- of privacysignalen.",
+      "Na een gezamenlijk feitenrapport: stoppen, aanpassen, beperkt verlengen of pas dan een volgende samenwerkingsfase bespreken.",
     ],
     sources: [
       {
@@ -102,9 +128,9 @@ const bodies: Record<BodyKey, BodyConfig> = {
         href: "https://www.nob.net/actueel/vijf-vragen-aan-erik-berk-over-de-aanpassing-van-de-code-of-conduct-en-de-handreiking-van-het-kantoorhandboek/",
       },
       {
-        label: "NOB over ledentoezicht",
-        note: "Verplichte online cursus, jaarlijkse zelftoets en toezicht op beroepsregels.",
-        href: "https://www.nob.net/actueel/nob-2024/",
+        label: "Impact van AI in de fiscale praktijk",
+        note: "Onderzoek uit 2026 naar gebruik, kansen en behoefte aan praktische ondersteuning.",
+        href: "https://www.nob.net/actueel/de-impact-van-ai-binnen-de-fiscale-dienstverlening/",
       },
     ],
   },
@@ -113,9 +139,28 @@ const bodies: Record<BodyKey, BodyConfig> = {
     name: "Register Belastingadviseurs",
     shortName: "RB",
     proposition:
-      "Laat het RB-keurmerk ook bij de digitale keuze van een specialist aantoonbaar het verschil maken voor het mkb.",
+      "Maak van professionele vindbaarheid een stroom van passende opdrachten.",
     context:
-      "Het RB positioneert de RB-titel als kwaliteitsbewijs voor de mkb-adviespraktijk, biedt leden het logo als keurmerk en laat leden zelf kiezen of zij vindbaar zijn op interessegebied en specialisme. Fiscale Lijn kan daarop voortbouwen met gecontroleerde toegang tot afgebakend specialistisch werk — onder regie van het RB.",
+      "Vind een RB helpt ondernemers een gekwalificeerde adviseur vinden. Fiscale Lijn kan daar een veilige opdrachtlaag aan toevoegen: de belastingvraag is al geordend, afgebakend en geprijsd voordat een vrijwillig RB-lid beslist of die past.",
+    ask:
+      "Toets met ons of vrijwillige RB-leden via een besloten proef aantoonbaar meer passend specialistisch mkb-werk krijgen.",
+    evidence: [
+      {
+        label: "BESTAANDE BASIS",
+        value: "Vind een RB",
+        text: "Het RB laat leden nu al vrijwillig vindbaar zijn op interessegebied en specialisme. Fiscale Lijn vervangt dit niet, maar voegt een afgebakende opdracht toe.",
+      },
+      {
+        label: "LEDENWAARDE",
+        value: "Van profiel naar werk",
+        text: "De klantvraag, privacycontrole, ontbrekende feiten, tijd en vergoeding zijn vooraf zichtbaar. Het lid ontvangt geen vrijblijvende contactlijst.",
+      },
+      {
+        label: "INNOVATIE",
+        value: "Veilige praktijkproef",
+        text: "De Commissie AI & Digitalisering kan meedenken over menselijke controle en leerpunten uit echte mkb-vragen, zonder AI het eindoordeel te geven.",
+      },
+    ],
     associationValue: [
       {
         title: "Van vindbaarheid naar passende opdrachten",
@@ -170,11 +215,21 @@ const bodies: Record<BodyKey, BodyConfig> = {
       "Samengevoegde inzichten voor het RB zijn niet herleidbaar tot klant, lid of kantoor zonder afzonderlijke wettelijke grondslag.",
     ],
     pilot: [
-      "Samen met Ledenzaken en de Commissie AI & Digitalisering bepalen hoe lidmaatschap wordt gecontroleerd en getoond.",
-      "Starten met vrijwillige leden voor omzetbelasting en loonheffingen, aansluitend op bestaande RB-specialismefilters.",
-      "Meten of opdrachten beter passen, de voorbereiding afneemt en leden meer specialistisch werk ontvangen.",
-      "Het RB mag de proef direct stoppen bij risico’s voor merk, kwaliteit of privacy; uitbreiding volgt alleen na gezamenlijke evaluatie.",
+      "20–30 vrijwillige RB-leden die aantoonbaar bevoegd en verzekerd zijn om opdrachten aan te nemen.",
+      "Drie maanden, met omzetbelasting en loonheffingen als afgebakende eerste onderwerpen.",
+      "Meten: betaalde conversie, passendheid, bespaarde intaketijd, aanvullende ledenomzet, klantbegrip en kwaliteits- of privacysignalen.",
+      "Het RB houdt een stoprecht; merkgebruik en een vaste registerkoppeling vragen na de evaluatie een afzonderlijk besluit.",
     ],
+    economics: {
+      title: "Vijf passende opdrachten kunnen de jaarcontributie rekenkundig evenaren.",
+      figures: [
+        { label: "Opdrachtprijs", value: "€200" },
+        { label: "Platformvergoeding (18%)", value: "€36" },
+        { label: "Omzet adviseur per opdracht", value: "€164" },
+        { label: "Vijf opdrachten", value: "€820" },
+      ],
+      note: "Illustratie, geen rendementsbelofte. Het RB publiceert voor 2026 een reguliere contributie van €815 exclusief btw. De berekening houdt geen rekening met arbeid, andere kosten of belasting van de adviseur.",
+    },
     sources: [
       {
         label: "RB-lidmaatschap",
@@ -234,8 +289,8 @@ export default function ProfessionalBodyPitch({ body }: { body: BodyKey }) {
         </Link>
         <nav aria-label="Voorstelnavigatie">
           <a href="#waarde">Meerwaarde</a>
+          <a href="#kwaliteit">Kwaliteitsmodel</a>
           <a href="#verificatie">Controle lidmaatschap</a>
-          <a href="#waarborgen">Waarborgen</a>
           <a href="#pilot">Proef</a>
         </nav>
         <Link className="body-switch" href={`/partners/${otherBody}/`}>
@@ -251,16 +306,16 @@ export default function ProfessionalBodyPitch({ body }: { body: BodyKey }) {
         </div>
         <aside>
           <span>DE VRAAG AAN {config.shortName}</span>
-          <strong>Ontwerp met ons een betrouwbare controle van het lidmaatschap.</strong>
+          <strong>{config.ask}</strong>
           <p>
-            Met goedgekeurde formulering en uitsluitend na afzonderlijke
-            toestemming: zichtbare {config.shortName}-status bij een
-            gecontroleerde fiscalist.
+            Geen brede samenwerking vooraf. Eerst samen vaststellen of het model
+            leden helpt, ondernemers duidelijkheid geeft en de professionele norm
+            aantoonbaar beschermt.
           </p>
           <dl>
-            <div><dt>Toegang</dt><dd>Actieve status als harde eis</dd></div>
-            <div><dt>Gegevens</dt><dd>Minimaal en alleen voor het afgesproken doel</dd></div>
-            <div><dt>Regie</dt><dd>Voorwaarden bij {config.shortName}</dd></div>
+            <div><dt>Duur</dt><dd>3 maanden</dd></div>
+            <div><dt>Deelnemers</dt><dd>20–30 vrijwillige adviseurs</dd></div>
+            <div><dt>Onderwerpen</dt><dd>Btw en loonheffingen</dd></div>
           </dl>
         </aside>
       </section>
@@ -268,11 +323,20 @@ export default function ProfessionalBodyPitch({ body }: { body: BodyKey }) {
       <section className="body-thesis">
         <span>DE GEDEELDE KANS</span>
         <blockquote>
-          Ondernemers zoeken snel de juiste diepgang. Fiscalisten hebben genoeg
-          passend werk nodig om specialist te worden en te blijven. Een
-          beroepsvereniging borgt kwaliteit; Fiscale Lijn organiseert de route
-          van vraag naar gecontroleerde specialist.
+          De beroepsvereniging bepaalt de professionele norm. Fiscale Lijn zet
+          een ongestructureerde belastingvraag om in een afgebakende opdracht.
+          De adviseur blijft onafhankelijk en eindverantwoordelijk.
         </blockquote>
+      </section>
+
+      <section className="body-evidence" aria-label={`Aanleiding voor het voorstel aan ${config.shortName}`}>
+        {config.evidence.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.text}</p>
+          </article>
+        ))}
       </section>
 
       <section className="body-value" id="waarde">
@@ -289,6 +353,37 @@ export default function ProfessionalBodyPitch({ body }: { body: BodyKey }) {
           <h2>Meer specialistisch werk. Minder ruis rondom het vak.</h2>
         </div>
         <ValueList items={config.memberValue} />
+      </section>
+
+      <section className="body-quality" id="kwaliteit">
+        <div className="body-section-intro light">
+          <p>DRIE ZICHTBARE KWALITEITSLAGEN</p>
+          <h2>Geen ondoorzichtige score die bepaalt wie de beste fiscalist is.</h2>
+          <p className="body-quality-intro">
+            Een klant moet begrijpen wat door de vereniging is bevestigd, wat
+            op het platform is aangetoond en wat eerdere klanten hebben ervaren.
+          </p>
+        </div>
+        <div className="body-quality-grid">
+          <article>
+            <b>01</b>
+            <span>BRON: {config.shortName}</span>
+            <h3>Geverifieerde beroepsstatus</h3>
+            <p>Actieve status en controledatum. Alleen {config.shortName} bepaalt wat die status inhoudt.</p>
+          </article>
+          <article>
+            <b>02</b>
+            <span>BRON: FISCALE LIJN</span>
+            <h3>Ervaring per specialisme</h3>
+            <p>Aantoonbaar afgeronde opdrachten per onderwerp. Geen algemene kwaliteitsclaim namens de vereniging.</p>
+          </article>
+          <article>
+            <b>03</b>
+            <span>BRON: ECHTE KLANT</span>
+            <h3>Geverifieerde klantervaring</h3>
+            <p>Alleen na afgerond werk, met uitleg over berekening en recht op reactie. Geen tuchtrechtelijk oordeel.</p>
+          </article>
+        </div>
       </section>
 
       <section className="body-verification" id="verificatie">
@@ -316,10 +411,52 @@ export default function ProfessionalBodyPitch({ body }: { body: BodyKey }) {
         </ul>
       </section>
 
+      {config.economics ? (
+        <section className="body-economics">
+          <div>
+            <p className="body-kicker">REKENVOORBEELD LEDENWAARDE</p>
+            <h2>{config.economics.title}</h2>
+            <p>{config.economics.note}</p>
+          </div>
+          <dl>
+            {config.economics.figures.map((figure) => (
+              <div key={figure.label}>
+                <dt>{figure.label}</dt>
+                <dd>{figure.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+
+      <section className="body-path">
+        <div className="body-section-intro">
+          <p>SAMENWERKING IN FASEN</p>
+          <h2>Iedere stap is afzonderlijk en omkeerbaar.</h2>
+        </div>
+        <div className="body-path-steps">
+          <article>
+            <span>FASE 1</span>
+            <h3>Status controleren</h3>
+            <p>Een afgesproken ledenvermelding, minimale controle en intrekkingsroute. Nog geen logo of publieke goedkeuringsclaim.</p>
+          </article>
+          <article>
+            <span>FASE 2</span>
+            <h3>Vrijwillig ledenvoordeel</h3>
+            <p>Deelnemende leden ontvangen passende opdrachten. We meten waarde, kwaliteit en risico’s voordat we opschalen.</p>
+          </article>
+          <article>
+            <span>FASE 3</span>
+            <h3>Innovatie en kwaliteit</h3>
+            <p>Alleen na nieuwe afspraken: gezamenlijke standaarden, audits en eventueel afzonderlijke toestemming voor merkgebruik.</p>
+          </article>
+        </div>
+      </section>
+
       <section className="body-pilot" id="pilot">
         <div>
           <p className="body-kicker">VOORGESTELDE EERSTE STAP</p>
-          <h2>Een omkeerbare proef vóór ieder publiek gebruik van het keurmerk.</h2>
+          <h2>Drie maanden om de waarde én de risico’s te meten.</h2>
           <p>
             Geen brede lancering en geen technische koppeling zonder duidelijke afspraken over toezicht en besluitvorming.
             Eerst samen bewijzen dat de route leden helpt en de kwaliteitsnorm
@@ -349,7 +486,9 @@ export default function ProfessionalBodyPitch({ body }: { body: BodyKey }) {
         </div>
         <p className="body-source-note">
           Bronnen geraadpleegd in september 2026. Publieke informatie bevestigt
-          geen technische toegang tot het register of toestemming voor gebruik op het platform; beide maken deel uit van dit voorstel.
+          geen samenwerking, technische registertoegang of toestemming voor
+          merkgebruik. Feiten, voorstellen en nog te toetsen aannames zijn daarom
+          bewust van elkaar gescheiden.
         </p>
       </section>
 

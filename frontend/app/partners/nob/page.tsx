@@ -4,7 +4,7 @@ import ProfessionalBodyPitch from "../ProfessionalBodyPitch";
 export const metadata: Metadata = {
   title: "Samenwerkingsvoorstel NOB | Fiscale Lijn",
   description:
-    "Conceptvoorstel voor controle van NOB-lidmaatschap, passende specialistische opdrachten en een gezamenlijke kwaliteitsproef.",
+    "Concept voor een besloten proef waarin NOB-kwaliteit, onafhankelijkheid en menselijke eindverantwoordelijkheid zichtbaar blijven in digitaal belastingadvies.",
   robots: { index: false, follow: false },
 };
 

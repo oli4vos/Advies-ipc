@@ -4,7 +4,7 @@ import ProfessionalBodyPitch from "../ProfessionalBodyPitch";
 export const metadata: Metadata = {
   title: "Samenwerkingsvoorstel RB | Fiscale Lijn",
   description:
-    "Conceptvoorstel voor controle van RB-lidmaatschap, specialistische mkb-opdrachten en een gezamenlijke kwaliteitsproef.",
+    "Concept voor een besloten proef die vrijwillige RB-leden koppelt aan afgebakende specialistische mkb-opdrachten.",
   robots: { index: false, follow: false },
 };
 
