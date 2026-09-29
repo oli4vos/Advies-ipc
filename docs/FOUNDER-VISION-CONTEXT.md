@@ -30,6 +30,15 @@ De drempel om goed fiscaal advies te krijgen is te hoog. Het aanbod moet daarom 
 
 Een eindantwoord moet voldoende comfort bieden om een handeling, aangifte of aftrekpost uit te voeren en om de onderbouwing bij een eventuele controle te begrijpen.
 
+Daar staat een even belangrijke aanbodbelofte tegenover. Fiscalisten kunnen niet
+meer op ieder onderwerp voldoende actuele diepgang behouden, terwijl losse
+praktijken vaak te weinig gelijksoortige casussen krijgen om een specialisme op
+te bouwen en scherp te houden. Fiscale Lijn bundelt versnipperde vraag per
+vakgebied. Zo krijgen klanten sneller betaalbare zekerheid en krijgen
+fiscalisten genoeg passend werk om specialist te worden én te blijven. Dit is
+een kernonderdeel van de marktplaatsstrategie, niet alleen een
+acquisitievoordeel voor adviseurs.
+
 **Ontwerpimplicatie:** een antwoord zonder bron, voorwaarden, onzekerheden, actie en reikwijdte is geen afgerond product. Vermijd absolute claims als “controleproof” of een garantie op een fiscale uitkomst.
 
 ### 4. Eerste inhoudelijke scope
