@@ -59,7 +59,7 @@ export default function ChatPage() {
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               <CpuChipIcon className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">Routecheck belastingvraag</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Eerste beoordeling van uw belastingvraag</h1>
             </div>
             <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-500">
               <span>•</span>
@@ -83,7 +83,7 @@ export default function ChatPage() {
               Welkom bij AI Check Advies
             </h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              Leg je belastingvraag voor aan de routecheck. In de lokale MVP wordt je verhaal gestructureerd door dezelfde casusflow als de hoofdapp. Op GitHub Pages wordt niets doorgestuurd.
+              Leg uw belastingvraag voor voor een eerste beoordeling. In de lokale proefversie wordt uw verhaal geordend via dezelfde werkwijze als in de hoofdapp. Op GitHub Pages wordt niets doorgestuurd.
             </p>
             <div className="mt-6 space-y-2">
               <div className="text-sm text-gray-400">
@@ -91,7 +91,7 @@ export default function ChatPage() {
               </div>
               <div className="space-y-1">
                 <div className="text-sm text-gray-600 bg-gray-100 rounded-lg px-3 py-2">
-                  "Ik twijfel over de btw op een online training."
+                  "Ik twijfel over de btw op een online cursus."
                 </div>
                 <div className="text-sm text-gray-600 bg-gray-100 rounded-lg px-3 py-2">
                   "Welke informatie ontbreekt voor een goede beoordeling?"
@@ -142,7 +142,7 @@ export default function ChatPage() {
 
         {createdCaseCode && (
           <div className="mx-auto max-w-4xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
-            <strong>De routecheck staat nu als casus in uw klantomgeving.</strong>
+            <strong>De eerste beoordeling staat nu als casus in uw klantomgeving.</strong>
             <a
               className="ml-2 font-semibold underline"
               href={`/?case=${encodeURIComponent(createdCaseCode)}`}
@@ -180,7 +180,7 @@ export default function ChatPage() {
 
         <div className="mt-3 text-xs text-gray-500">
           <p>
-            <strong>Disclaimer:</strong> Dit is een routecheck en geen zelfstandig belastingadvies. Een definitief antwoord vereist controle door een passende specialist. In de lokale MVP worden toegestane bestanden privé opgeslagen en eerst lokaal op veiligheid gecontroleerd; op GitHub Pages wordt niets doorgestuurd.
+            <strong>Let op:</strong> Dit is een eerste beoordeling en geen zelfstandig belastingadvies. Een definitief antwoord vereist controle door een passende specialist. In de lokale proefversie worden toegestane bestanden privé opgeslagen en eerst lokaal op veiligheid gecontroleerd; op GitHub Pages wordt niets doorgestuurd.
           </p>
         </div>
       </div>

@@ -37,14 +37,14 @@ const pitchYears = [
     monthlyCases: 180,
     aov: 105,
     opex: 105000,
-    focus: "Pilot en bewijs van herhaalgebruik",
+    focus: "Proef en bewijs van herhaalgebruik",
   },
   {
     year: "Jaar 2",
     monthlyCases: 750,
     aov: 112,
     opex: 240000,
-    focus: "Product-market fit in loonheffingen en btw",
+    focus: "Bewijzen dat het aanbod past bij de vraag in loonheffingen en btw",
   },
   {
     year: "Jaar 3",
@@ -65,7 +65,7 @@ const pitchYears = [
     monthlyCases: 11000,
     aov: 145,
     opex: 1650000,
-    focus: "Categorieleider voor fiscale vooranalyse",
+    focus: "Marktleider voor de eerste analyse van belastingvragen",
   },
 ];
 
@@ -77,7 +77,7 @@ const pitchScenarios: Record<
     label: "Conservatief",
     volume: 0.55,
     cost: 0.85,
-    note: "Langzamere acquisitie en beperkte uitbreiding buiten de eerste niches.",
+    note: "Langzamere klantenwerving en beperkte uitbreiding buiten de eerste onderwerpen.",
   },
   base: {
     label: "Basisscenario",
@@ -89,7 +89,7 @@ const pitchScenarios: Record<
     label: "Groeiscenario",
     volume: 1.55,
     cost: 1.25,
-    note: "Snellere distributie door partnerships en sterke aanbodliquiditeit.",
+    note: "Sneller bereik door samenwerkingen en voldoende beschikbare specialisten.",
   },
 };
 
@@ -122,7 +122,7 @@ const casesSeed: CaseItem[] = [
     source: "Wet op de loonbelasting 1964, art. 23",
     sourceType: "Wet- en regelgeving",
     history: [
-      { label: "Gepubliceerd op jobboard", date: "Vandaag · 09:42" },
+      { label: "Gepubliceerd in het opdrachtenoverzicht", date: "Vandaag · 09:42" },
       { label: "AI-analyse afgerond", date: "Vandaag · 09:41" },
     ],
   },
@@ -153,7 +153,7 @@ const casesSeed: CaseItem[] = [
       "Bij minder dan 500 privékilometers kan onder voorwaarden geen bijtelling gelden. Een sluitende rittenregistratie en passende verklaring zijn belangrijk.",
     source: "Handboek Loonheffingen 2025, hoofdstuk auto",
     sourceType: "Officiële uitvoeringsinformatie",
-    history: [{ label: "Gepubliceerd op jobboard", date: "Gisteren · 16:10" }],
+    history: [{ label: "Gepubliceerd in het opdrachtenoverzicht", date: "Gisteren · 16:10" }],
   },
   {
     id: "LH-1034",
@@ -187,7 +187,7 @@ const casesSeed: CaseItem[] = [
         label: "Opdracht geaccepteerd door adviseur",
         date: "Gisteren · 14:23",
       },
-      { label: "Gepubliceerd op jobboard", date: "Gisteren · 11:08" },
+      { label: "Gepubliceerd in het opdrachtenoverzicht", date: "Gisteren · 11:08" },
     ],
   },
   {
@@ -219,7 +219,7 @@ const casesSeed: CaseItem[] = [
       "Een ander AI-systeem adviseerde om voor alle onderdelen standaard 21% btw te rekenen, zonder onderscheid naar klantlocatie.",
     source: "Richtlijn 2006/112/EG, samengestelde prestaties",
     sourceType: "Wet- en regelgeving",
-    history: [{ label: "Gepubliceerd op jobboard", date: "Maandag · 10:12" }],
+    history: [{ label: "Gepubliceerd in het opdrachtenoverzicht", date: "Maandag · 10:12" }],
   },
   {
     id: "BTW-1014",
@@ -376,7 +376,7 @@ export default function Home() {
         }
       }
     } catch {
-      setNotice("Het intakeconcept kon niet worden hersteld.");
+      setNotice("Uw opgeslagen conceptvraag kon niet worden hersteld.");
     } finally {
       setDraftReady(true);
     }
@@ -569,13 +569,13 @@ export default function Home() {
               : item,
           ),
         );
-        setNotice("Adviseur gekozen. Het mock-betaalverzoek staat klaar.");
+        setNotice("Adviseur gekozen. Het demo-betaalverzoek staat klaar.");
         return;
       }
       await saveCase(
         id,
         (backendId) => selectClaim(backendId, claimId),
-        "Adviseur gekozen. Het mock-betaalverzoek staat klaar.",
+        "Adviseur gekozen. Het demo-betaalverzoek staat klaar.",
       );
     },
     pay = async (id: string) => {
@@ -587,12 +587,12 @@ export default function Home() {
           id,
           hasInformationPayment ? "IN_REVIEW" : "PAID",
           hasInformationPayment
-            ? "Aanvullende mockbetaling ontvangen. De adviseur kan verder reviewen."
-            : "Mockbetaling ontvangen. De adviseur kan starten.",
+            ? "Aanvullende demobetaling ontvangen. De adviseur kan verder met de beoordeling."
+            : "Demobetaling ontvangen. De adviseur kan starten.",
         );
         return;
       }
-      await saveCase(id, payCase, "Mockbetaling ontvangen. De adviseur kan starten.");
+      await saveCase(id, payCase, "Demobetaling ontvangen. De adviseur kan starten.");
     },
     reviewSubmit = async (id: string, input: ReviewInput) => {
       const current = cases.find((item) => item.id === id);
@@ -633,7 +633,7 @@ export default function Home() {
           expert_name: "Mara van Dijk",
           status: "PENDING_CUSTOMER",
           question,
-          rationale: "Deze informatie is volgens de demo-regelengine noodzakelijk om de fiscale conclusie verantwoord te kunnen controleren.",
+          rationale: "Deze informatie is volgens de regels van de demo noodzakelijk om de fiscale conclusie verantwoord te kunnen controleren.",
           required_for_assessment: true,
           evaluation_origin: "RULE_ENGINE",
           evaluation_confidence: 91,
@@ -711,7 +711,7 @@ export default function Home() {
               : item,
           ),
         );
-        setNotice("Toeslag bevestigd. De aanvullende mockbetaling staat klaar.");
+        setNotice("Toeslag bevestigd. De aanvullende demobetaling staat klaar.");
         return;
       }
       void refreshCase(id, (backendId) => acceptInformationFee(backendId, requestId));
@@ -773,7 +773,7 @@ export default function Home() {
         setNotice(
           error instanceof Error
             ? error.message
-            : "De lokale Python-API is niet bereikbaar.",
+            : "De lokale server is niet bereikbaar.",
         );
         return;
       }
@@ -787,7 +787,7 @@ export default function Home() {
           ? ["btw", "controle nodig"]
           : form.category === "Personeel & loon"
             ? ["loonheffingen", "controle nodig"]
-            : ["mkb", "triage nodig"],
+            : ["mkb", "eerste beoordeling nodig"],
       summary: (form.description || "Nieuwe casus ter beoordeling.").slice(
         0,
         490,
@@ -798,7 +798,7 @@ export default function Home() {
       complexity: "Nog te bepalen",
       minutes: "Nog te bepalen",
       fee: 0,
-      deadline: "Na triage",
+      deadline: "Na eerste beoordeling",
       missing: 1,
       match: 0,
       status: "PENDING_REVIEW",
@@ -815,7 +815,7 @@ export default function Home() {
       originalDescription: form.description,
       anonymizedDescription: anonymiseText(form.description),
       source: "Nog te bepalen",
-      sourceType: "Niet geverifieerd",
+      sourceType: "Niet gecontroleerd",
       history: [{ label: "Casus ingediend", date: "Zojuist" }],
     };
     setCases((items) => [n, ...items]);
@@ -1006,7 +1006,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
           <span className="brand-mark">F</span>
           <span>
             <b>fiscale lijn</b>
-            <small>investeerderscase</small>
+            <small>voor investeerders</small>
           </span>
         </a>
         <div className="pitch-nav-links">
@@ -1021,7 +1021,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
       </nav>
       <div className="pitch-hero">
         <div className="pitch-copy">
-          <p className="eyebrow">INVESTEERDERSCASE / MANAGEMENTAANNAMES</p>
+          <p className="eyebrow">INVESTEERDERSVOORSTEL / VOORLOPIGE AANNAMES</p>
           <h1>
             Belastinghulp voor het mkb,
             <br />
@@ -1029,8 +1029,8 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
           </h1>
           <p className="pitch-thesis">
             Fiscale Lijn begint bij concrete belastingvragen van kleine en
-            middelgrote ondernemingen. Het platform maakt rommelige input
-            beoordeelbaar; AI ondersteunt de vooranalyse en een passende
+            middelgrote ondernemingen. Het platform maakt losse informatie
+            beoordeelbaar; AI ondersteunt de eerste analyse en een passende
             specialist blijft verantwoordelijk voor het eindantwoord.
           </p>
           <div className="pitch-value-statement">
@@ -1045,27 +1045,27 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             </p>
           </div>
           <div className="pitch-tags">
-            <span>Marketplace</span>
-            <span>Human-in-the-loop</span>
-            <span>MKB · btw + werkgeversvragen als wedge</span>
+            <span>Vraag en aanbod bij elkaar</span>
+            <span>Altijd menselijke eindcontrole</span>
+            <span>Eerste focus: btw en werkgeversvragen</span>
           </div>
         </div>
         <aside className="investment-ask">
-          <span className="ask-label">INDICATIEVE PRE-SEED</span>
+          <span className="ask-label">INDICATIEVE EERSTE INVESTERINGSRONDE</span>
           <strong>€250.000</strong>
           <p>
-            18 maanden om aanbod, herhaalgebruik en unit economics in twee
-            MKB-vraagtypen te bewijzen.
+            18 maanden om het aanbod, terugkerende klanten en de opbrengst per
+            opdracht in twee soorten MKB-vragen te bewijzen.
           </p>
           <div className="funding-split">
             <span>
               <b>45%</b> product & veiligheid
             </span>
             <span>
-              <b>30%</b> distributie
+              <b>30%</b> klanten bereiken
             </span>
             <span>
-              <b>15%</b> compliance
+              <b>15%</b> wet- en regelgeving
             </span>
             <span>
               <b>10%</b> operatie
@@ -1085,7 +1085,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             Een fiscalist kan niet op ieder onderwerp actuele diepgang blijven
             bieden. Tegelijk krijgt een individuele praktijk vaak te weinig
             gelijksoortige casussen om een specialisme versneld op te bouwen en
-            scherp te houden. Ondernemers betalen ondertussen voor intake en
+            scherp te houden. Ondernemers betalen ondertussen voor voorbereiding en
             zoektijd, terwijl zij vooral snel zekerheid over één concrete vraag
             nodig hebben.
           </p>
@@ -1108,7 +1108,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
           <div>
             <b>03</b>
             <span>
-              Het platform adviseert één passende specialist en toont scope,
+              Het platform adviseert één passende specialist en toont afbakening,
               vaste prijs en onderbouwing; alternatieven blijven mogelijk.
             </span>
           </div>
@@ -1124,32 +1124,32 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
 
       <section className="market-entry" id="markttoegang">
         <div className="market-entry-copy">
-          <p className="eyebrow">WAAROM NU / EERSTE MARKT</p>
+          <p className="eyebrow">WAAROM NU / EERSTE DOELGROEP</p>
           <h2>Begin smal waar de vraag herhaalbaar en de waarde direct zichtbaar is.</h2>
           <p>
-            De hypothese is niet dat AI de fiscalist vervangt. AI verlaagt de
+            Het uitgangspunt is niet dat AI de fiscalist vervangt. AI verlaagt de
             voorbereidingslast, terwijl een gekwalificeerde specialist het
-            oordeel geeft. De eerste wedge is daarom afgebakende btw- en
-            werkgeversvragen van mkb-ondernemers: frequent genoeg om patronen
-            te leren, specifiek genoeg voor uitlegbare matching en gebundeld
+            oordeel geeft. De eerste focus ligt daarom op afgebakende btw- en
+            werkgeversvragen van mkb-ondernemers: vaak genoeg om patronen
+            te leren, specifiek genoeg om de keuze voor een specialist uit te leggen en gebundeld
             genoeg om duurzame specialistische praktijken te voeden.
           </p>
         </div>
-        <div className="market-entry-path" aria-label="Go-to-market in drie fasen">
+        <div className="market-entry-path" aria-label="Marktbenadering in drie fasen">
           <article>
             <span>01 / VRAAG</span>
             <strong>MKB met een concrete belastingbeslissing</strong>
             <p>Start bij btw, bedrijfskosten en loonheffingen; geen brede adviestrajecten.</p>
           </article>
           <article>
-            <span>02 / DISTRIBUTIE</span>
+            <span>02 / KLANTEN BEREIKEN</span>
             <strong>Boekhouders en salarisadministrateurs als vertrouwenskanaal</strong>
             <p>Zij signaleren de vraag, maar hebben niet altijd de specialistische capaciteit.</p>
           </article>
           <article>
             <span>03 / AANBOD</span>
-            <strong>Geverifieerde NOB- en RB-specialisten</strong>
-            <p>Gerichte opdrachten, minder acquisitie en een hogere waarde per gewerkt uur.</p>
+            <strong>Gecontroleerde NOB- en RB-specialisten</strong>
+            <p>Gerichte opdrachten, minder klantenwerving en een hogere waarde per gewerkt uur.</p>
           </article>
         </div>
       </section>
@@ -1157,15 +1157,15 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
       <section className="economics-section" id="economie">
         <div className="section-head">
           <div>
-            <p className="eyebrow">UNIT ECONOMICS / BASISSCENARIO</p>
+            <p className="eyebrow">OPBRENGST PER OPDRACHT / BASISSCENARIO</p>
             <h2>
-              Omzet groeit met transacties, niet met een zware
-              supportorganisatie.
+              Omzet groeit met betaalde opdrachten, niet met een groot
+              ondersteuningsteam.
             </h2>
           </div>
           <p className="section-note">
             Eerste verdienmodel: 18% platformvergoeding op de opdrachtwaarde.
-            Abonnementen en B2B-licenties zijn niet in de raming opgenomen.
+            Zakelijke abonnementen en licenties zijn niet in de raming opgenomen.
           </p>
         </div>
         <div className="metric-ribbon">
@@ -1175,9 +1175,9 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             <span>incl. adviseursvergoeding</span>
           </div>
           <div>
-            <small>Platform take rate</small>
+            <small>Aandeel voor het platform</small>
             <strong>18%</strong>
-            <span>transactiegedreven</span>
+            <span>op basis van betaalde opdrachten</span>
           </div>
           <div>
             <small>Variabele platformkosten</small>
@@ -1196,7 +1196,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
         <div className="forecast-head">
           <div>
             <p className="eyebrow">VIJFJARENPLAN</p>
-            <h2>Een toetsbaar pad naar {money(yearFive.arr)} ARR.</h2>
+            <h2>Een toetsbaar pad naar {money(yearFive.arr)} jaarlijkse platformomzet.</h2>
             <p>{assumptions.note}</p>
           </div>
           <div
@@ -1221,10 +1221,10 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
                 <th>Periode</th>
                 <th>Casussen / maand</th>
                 <th>Gem. opdracht</th>
-                <th>GMV run-rate</th>
-                <th>Platform-ARR</th>
-                <th>Jaar-opex</th>
-                <th>Run-rate ruimte</th>
+                <th>Totale opdrachtwaarde per jaar</th>
+                <th>Platformomzet per jaar</th>
+                <th>Jaarlijkse bedrijfskosten</th>
+                <th>Ruimte op jaarbasis</th>
               </tr>
             </thead>
             <tbody>
@@ -1262,11 +1262,12 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
           </table>
         </div>
         <p className="forecast-footnote">
-          ARR is de geannualiseerde platformomzet op basis van het volume aan
-          het einde van ieder jaar: maandelijkse casussen × gemiddelde
-          opdrachtwaarde × 18% × 12. GMV is de totale opdrachtwaarde. De
-          run-rate ruimte is geen boekhoudkundige jaarwinst. Bedragen zijn
-          exclusief btw en financieringskosten.
+          De platformomzet per jaar is berekend met het maandvolume aan het
+          einde van ieder jaar: maandelijkse casussen × gemiddelde
+          opdrachtwaarde × 18% × 12. De ruimte op jaarbasis is het verschil
+          tussen die omzet en de geraamde bedrijfskosten; dit is geen
+          boekhoudkundige jaarwinst. Bedragen zijn exclusief btw en
+          financieringskosten.
         </p>
       </section>
 
@@ -1278,15 +1279,15 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
         <dl className="evidence-ledger">
           <div>
             <dt>Gebouwd</dt>
-            <dd>End-to-end demo van intake, anonimisering, matching, betaling en expert-review.</dd>
+            <dd>Werkende proef van vraaginvoer, anonimisering, keuze van een specialist, betaling en menselijke beoordeling.</dd>
           </div>
           <div>
-            <dt>Te valideren</dt>
-            <dd>Betalingsbereidheid, herhaalgebruik, doorlooptijd en actieve specialistendichtheid.</dd>
+            <dt>Nog te toetsen</dt>
+            <dd>Betalingsbereidheid, herhaalgebruik, doorlooptijd en voldoende actieve specialisten.</dd>
           </div>
           <div>
-            <dt>Investeringspoort</dt>
-            <dd>Pas opschalen wanneer klanttevredenheid én bijdrage per casus reproduceerbaar zijn.</dd>
+            <dt>Voorwaarde voor verdere investering</dt>
+            <dd>Pas uitbreiden wanneer klanttevredenheid én opbrengst per casus steeds opnieuw haalbaar blijken.</dd>
           </div>
         </dl>
       </section>
@@ -1294,11 +1295,11 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
       <div className="milestone-grid" id="bewijsplan">
         <section>
           <p className="eyebrow">UITVOERINGSPLAN</p>
-          <h2>Bewijs vóór schaal.</h2>
+          <h2>Eerst bewijzen, dan uitbreiden.</h2>
           <div className="milestones">
             <div>
               <b>0—12 maanden</b>
-              <strong>Transactie bewijzen</strong>
+              <strong>Bewijzen dat klanten betalen</strong>
               <span>
                 50 actieve adviseurs, 180 casussen per maand en aantoonbaar
                 herhaalgebruik.
@@ -1306,7 +1307,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             </div>
             <div>
               <b>12—24 maanden</b>
-              <strong>Distributie bewijzen</strong>
+              <strong>Bewijzen hoe klanten ons vinden</strong>
               <span>
                 Boekhouders-, werkgevers- en softwarekanalen openen; 750 casussen per
                 maand.
@@ -1323,11 +1324,11 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
           </div>
         </section>
         <section className="defensibility">
-          <p className="eyebrow">VERDEDIGBAARHEID</p>
-          <h2>De voorsprong zit in workflowdata, niet in één model.</h2>
+          <p className="eyebrow">BLIJVEND VOORDEEL</p>
+          <h2>De voorsprong zit in gegevens uit het werkproces, niet in één AI-model.</h2>
           <ul>
             <li>
-              <b>Gestructureerde fiscale casusdata</b>
+              <b>Geordende gegevens uit belastingvragen</b>
               <span>
                 Feiten, ontbrekende informatie, bronnen en uitkomsten worden
                 herbruikbaar.
@@ -1336,14 +1337,14 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             <li>
               <b>Vertrouwd adviseursnetwerk</b>
               <span>
-                Geverifieerde specialisaties, responstijd en reviews verbeteren
-                de match.
+                Gecontroleerde specialisaties, reactietijd en beoordelingen
+                verbeteren de keuze van een passende specialist.
               </span>
             </li>
             <li>
-              <b>Operationele leercurve</b>
+              <b>Het werkproces leert mee</b>
               <span>
-                Elke review scherpt intake, prijsinschatting en
+                Elke menselijke beoordeling scherpt de vraaginvoer, prijsinschatting en
                 kwaliteitscontroles aan.
               </span>
             </li>
@@ -1361,27 +1362,27 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
             <b>Juridische positionering</b>
             <p>
               Platformvoorwaarden, beroepsaansprakelijkheid en facturatie namens
-              adviseurs vóór betaalde pilot juridisch valideren.
+              adviseurs vóór een betaalde proef juridisch laten controleren.
             </p>
           </article>
           <article>
-            <b>Marktplaatsliquiditeit</b>
+            <b>Voldoende vraag en beschikbare specialisten</b>
             <p>
-              Start met twee niches, maximaal drie gesloten aanbiedingen en
-              harde responstijden.
+              Start met twee onderwerpen, maximaal drie besloten aanbiedingen en
+              vaste reactietijden.
             </p>
           </article>
           <article>
             <b>Vertrouwen en privacy</b>
             <p>
-              Python-backend, EU-opslag, minimale dataverwerking en menselijke
-              eindcontrole als harde poorten.
+              Een centrale server in Python, opslag in de EU, minimale gegevensverwerking en menselijke
+              eindcontrole als vaste eisen.
             </p>
           </article>
           <article>
-            <b>Acquisitiekosten</b>
+            <b>Kosten om klanten te bereiken</b>
             <p>
-              Eerst organische adviseurs- en partnerkanalen bewijzen; betaalde
+              Eerst bestaande netwerken van adviseurs en partners bewijzen; betaalde
               groei pas na positieve bijdrage per casus.
             </p>
           </article>
@@ -1391,27 +1392,27 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
       <div className="assumption-banner">
         <Icon n="file" />
         <div>
-          <b>Dit is een pitchmodel, geen voorspelling.</b>
+          <b>Dit is een rekenmodel voor deze presentatie, geen voorspelling.</b>
           <span>
-            Alle bedragen, volumes en mijlpalen zijn managementaannames voor
-            discussie en moeten met pilots, interviews en echte conversiedata
-            worden gevalideerd.
+            Alle bedragen, aantallen en mijlpalen zijn voorlopige aannames van het team voor
+            discussie en moeten met proeven, gesprekken en echte cijfers over
+            gebruik en betaling worden getoetst.
           </span>
         </div>
       </div>
       <section className="pitch-close">
-        <p className="eyebrow">DE INVESTERINGSTHESE</p>
+        <p className="eyebrow">WAAROM DIT EEN INVESTERING VERDIENT</p>
         <h2>De toekomst is geen generalist voor iedere vraag, maar de juiste specialist op het juiste moment.</h2>
         <p className="pitch-close-thesis">
           Fiscale Lijn maakt die toekomst schaalbaar: snelle en betaalbare
           zekerheid voor klanten, een voorspelbaarder volume passend werk voor
-          fiscalisten en een kwaliteitsnetwerk dat met iedere menselijke review
+          fiscalisten en een kwaliteitsnetwerk dat met iedere menselijke beoordeling
           beter wordt.
         </p>
         <div>
           <span>Indicatieve ronde</span>
-          <strong>€250.000 pre-seed</strong>
-          <small>Onder voorbehoud van pilotvalidatie, juridische inrichting en definitieve begroting.</small>
+          <strong>€250.000 eerste investering</strong>
+          <small>Onder voorbehoud van toetsing in een proef, juridische inrichting en definitieve begroting.</small>
         </div>
         <a className="button primary" href={standalone ? "../" : "./"}>
           Bekijk het werkende product <Icon n="arrow" />
@@ -1419,7 +1420,7 @@ export function BusinessCase({ standalone = false }: { standalone?: boolean } = 
       </section>
       <footer>
         <span>fiscale lijn</span>
-        <span>Investeerderscase · managementversie · september 2026</span>
+        <span>Investeerdersvoorstel · werkversie · september 2026</span>
       </footer>
     </section>
   );
@@ -1440,7 +1441,7 @@ function DemoFlow({
 }) {
   const steps =
     role === "advisor"
-      ? ["Bekijk opdracht", "Claim casus", "Review antwoord"]
+      ? ["Bekijk opdracht", "Toon interesse", "Beoordeel antwoord"]
       : role === "admin"
         ? ["Controleer casus", "Publiceer", "Bewaak kwaliteit"]
         : ["Deel uw vraag", "Kies specialist", "Ontvang advies"];
@@ -1501,20 +1502,33 @@ function customerStatusLabel(status: Status) {
   );
 }
 
+const statusText: Record<Status, string> = {
+  PENDING_REVIEW: "Wacht op controle",
+  PUBLISHED: "Beschikbaar voor adviseurs",
+  CLAIMED: "Adviseur heeft interesse",
+  AWAITING_PAYMENT: "Wacht op betaling",
+  AWAITING_INFORMATION_PAYMENT: "Wacht op betaling van toeslag",
+  PAID: "Betaald",
+  IN_REVIEW: "In behandeling",
+  NEEDS_INFORMATION: "Aanvullende informatie nodig",
+  ANSWER_SUBMITTED: "Antwoord ingediend",
+  DELIVERED: "Antwoord beschikbaar",
+};
+
 function nextStepForCase(item: CaseItem) {
   switch (item.status) {
     case "PENDING_REVIEW":
       return "Controleer de anonimisering en wacht op publicatie.";
     case "PUBLISHED":
-      return "Een passende adviseur kan deze casus claimen.";
+      return "Een passende adviseur kan interesse in deze casus tonen.";
     case "CLAIMED":
       return "Bekijk de geïnteresseerde adviseur en maak een keuze.";
     case "AWAITING_PAYMENT":
-      return "Voer de mockbetaling uit om de beoordeling te starten.";
+      return "Voer de demobetaling uit om de beoordeling te starten.";
     case "NEEDS_INFORMATION":
       return "Beantwoord de noodzakelijke vraag van de adviseur.";
     case "AWAITING_INFORMATION_PAYMENT":
-      return "Bevestig de noodzakelijke toeslag en voer de mockbetaling uit.";
+      return "Bevestig de noodzakelijke toeslag en voer de demobetaling uit.";
     case "PAID":
     case "IN_REVIEW":
       return "De adviseur controleert de analyse en bronnen.";
@@ -1552,21 +1566,21 @@ function caseDecision(item: CaseItem, role: Role): CaseDecision {
       return {
         label: "Wacht op klantkeuze",
         title: "Uw interesse is gedeeld met de klant.",
-        description: "De klant vergelijkt de inhoudelijke match en kiest welke specialist de opdracht krijgt. U hoeft nu niets te doen.",
+        description: "De klant vergelijkt hoe goed de specialisten bij de vraag passen en kiest wie de opdracht krijgt. U hoeft nu niets te doen.",
       };
     }
     if (item.status === "AWAITING_PAYMENT" || item.status === "AWAITING_INFORMATION_PAYMENT") {
       return {
         label: "Wacht op betaling",
         title: "De klant heeft u gekozen.",
-        description: "Begin pas met de inhoudelijke controle nadat de betaling is bevestigd. De opdracht verschijnt daarna in uw reviewomgeving.",
+        description: "Begin pas met de inhoudelijke controle nadat de betaling is bevestigd. De opdracht verschijnt daarna in uw beoordelingsomgeving.",
       };
     }
     if (item.status === "DELIVERED") {
       return {
         label: "Opdracht afgerond",
         title: "Het gecontroleerde antwoord is afgeleverd.",
-        description: "De review, broncontrole en het definitieve antwoord blijven beschikbaar in het dossier.",
+        description: "De inhoudelijke beoordeling, broncontrole en het definitieve antwoord blijven beschikbaar in het dossier.",
       };
     }
     return {
@@ -1587,7 +1601,7 @@ function caseDecision(item: CaseItem, role: Role): CaseDecision {
   switch (item.status) {
     case "PENDING_REVIEW":
       return {
-        label: "Routecheck wordt gecontroleerd",
+        label: "Eerste beoordeling wordt gecontroleerd",
         title: "U hoeft nu niets te doen.",
         description: "Wij controleren de structuur en anonimisering voordat een adviseur uw vraag kan zien.",
       };
@@ -1609,7 +1623,7 @@ function caseDecision(item: CaseItem, role: Role): CaseDecision {
       return {
         label: "Uw akkoord is nodig",
         title: `Start de controle voor €${item.fee} excl. btw.`,
-        description: "Dit is de vaste demoprijs voor de getoonde scope. De specialist begint pas na uw betaling.",
+        description: "Dit is de vaste demoprijs voor de getoonde afbakening. De specialist begint pas na uw betaling.",
         action: "pay",
       };
     case "NEEDS_INFORMATION":
@@ -1728,7 +1742,7 @@ function HomeView({
           </h1>
           <p className="lead">
             Deel uw verhaal, brief, document of een AI-antwoord dat u al heeft.
-            U krijgt eerst een gratis routecheck. Is specialistische controle
+            U krijgt eerst een gratis eerste beoordeling. Is controle door een specialist
             nodig, dan ziet u vooraf de vaste prijs en wie verantwoordelijk is.
           </p>
           <div className="actions">
@@ -1743,7 +1757,7 @@ function HomeView({
             </button>
           </div>
           <div className="hero-assurances" aria-label="Belangrijkste zekerheden">
-            <span><Icon n="check" /> Eerste routecheck gratis</span>
+            <span><Icon n="check" /> Eerste beoordeling gratis</span>
             <span><Icon n="check" /> Vooraf een vaste prijs</span>
             <span><Icon n="check" /> Specialist controleert</span>
           </div>
@@ -1754,7 +1768,7 @@ function HomeView({
             <div>
               <b>01</b>
               <span>Uw vraag is begrijpelijk gemaakt</span>
-              <strong>Feiten, deadline en ontbrekende informatie</strong>
+              <strong>Feiten, uiterste datum en ontbrekende informatie</strong>
             </div>
             <div className="is-current">
               <b>02</b>
@@ -1764,10 +1778,10 @@ function HomeView({
             <div>
               <b>03</b>
               <span>U krijgt een actiegericht antwoord</span>
-              <strong>Bronnen, risico, deadline en volgende stap</strong>
+              <strong>Bronnen, risico, uiterste datum en volgende stap</strong>
             </div>
           </div>
-          <small>* Indicatieve demoprijs, exclusief btw. De echte prijs volgt pas na de routecheck.</small>
+          <small>* Indicatieve demoprijs, exclusief btw. De echte prijs volgt pas na de eerste beoordeling.</small>
         </aside>
       </section>
 
@@ -1782,7 +1796,7 @@ function HomeView({
             ["Btw & facturen", "Tarief, aftrek, vrijstelling of een factuur naar het buitenland."],
             ["Personeel & loon", "Loonheffingen, vergoedingen, auto van de zaak of een buitenlandse werknemer."],
             ["Kosten & aangifte", "Zakelijke kosten, aftrekposten of een onverwachte aanslag."],
-            ["Brief of deadline", "Een brief, controle, naheffing of bezwaar waarop u moet reageren."],
+            ["Brief of uiterste datum", "Een brief, controle, naheffing of bezwaar waarop u moet reageren."],
           ].map(([title, text], index) => (
             <button className="situation-card" key={title} onClick={onIntake}>
               <span>0{index + 1}</span>
@@ -1807,7 +1821,7 @@ function HomeView({
           />
           <Process
             n="02"
-            title="Gratis routecheck"
+            title="Gratis eerste beoordeling"
             text="Wij ordenen de vraag, signaleren privacyrisico's en bepalen of gratis hulp volstaat."
           />
           <Process
@@ -1818,7 +1832,7 @@ function HomeView({
           <Process
             n="04"
             title="Duidelijk antwoord en actie"
-            text="U krijgt antwoord, onderbouwing, onzekerheden, deadline en concrete vervolgstappen."
+            text="U krijgt antwoord, onderbouwing, onzekerheden, de uiterste datum en concrete vervolgstappen."
           />
         </div>
       </section>
@@ -1832,14 +1846,14 @@ function HomeView({
           <article>
             <span className="service-number">01</span>
             <div className="service-copy">
-              <p className="eyebrow">ROUTECHECK</p>
+              <p className="eyebrow">EERSTE BEOORDELING</p>
               <h3>Van losse informatie naar een heldere route.</h3>
               <p>Structuur, onderwerp, ontbrekende informatie en een duidelijke vervolgrichting.</p>
-              <ul><li>Vrije intake</li><li>Privacycontrole</li><li>Doorverwijzing als specialist niet nodig is</li></ul>
+              <ul><li>Uw verhaal in eigen woorden</li><li>Privacycontrole</li><li>Doorverwijzing als een specialist niet nodig is</li></ul>
             </div>
             <div className="service-action">
               <strong>Gratis</strong>
-              <button className="text-button" onClick={onIntake}>Start routecheck <Icon n="arrow" /></button>
+              <button className="text-button" onClick={onIntake}>Start eerste beoordeling <Icon n="arrow" /></button>
             </div>
           </article>
           <article className="recommended-service">
@@ -1860,28 +1874,28 @@ function HomeView({
             <span className="service-number">03</span>
             <div className="service-copy">
               <p className="eyebrow">SPECIALISTISCH ADVIES</p>
-              <h3>Meer risico vraagt een scherpere scope.</h3>
-              <p>Voor meer feiten, hoger risico of een korte deadline. U beslist pas na de prijs.</p>
-              <ul><li>Specialist op onderwerp</li><li>Scope en verantwoordelijkheid vastgelegd</li><li>Meerwerk alleen na akkoord</li></ul>
+              <h3>Meer risico vraagt een scherpere afbakening.</h3>
+              <p>Voor meer feiten, hoger risico of een korte uiterste datum. U beslist pas na de prijs.</p>
+              <ul><li>Specialist op onderwerp</li><li>Afbakening en verantwoordelijkheid vastgelegd</li><li>Meerwerk alleen na akkoord</li></ul>
             </div>
             <div className="service-action">
               <strong>Vaste prijs vooraf</strong>
-              <span>Na inhoudelijke routecheck</span>
+              <span>Na de eerste inhoudelijke beoordeling</span>
             </div>
           </article>
         </div>
-        <p className="price-note">* Dit zijn indicatieve prijzen in de MVP. In productie staat altijd het totale bedrag exclusief btw vóór betaling in beeld.</p>
+        <p className="price-note">* Dit zijn indicatieve prijzen in de proefversie. In de uiteindelijke versie staat altijd het totale bedrag exclusief btw vóór betaling in beeld.</p>
       </section>
 
       <section className="quality-proof">
         <div className="quality-copy">
           <p className="eyebrow">WIE DRAAGT DE VERANTWOORDELIJKHEID?</p>
           <h2>Techniek ordent. Een mens beoordeelt.</h2>
-          <p>Fiscale Lijn is bemiddelaar en organiseert intake, matching, betaling en kwaliteitscontrole. De gekozen specialist is verantwoordelijk voor het definitieve advies binnen de afgesproken scope.</p>
+          <p>Fiscale Lijn is bemiddelaar en organiseert de vraaginvoer, de keuze van een passende specialist, betaling en kwaliteitscontrole. De gekozen specialist is verantwoordelijk voor het definitieve advies binnen de afgesproken afbakening.</p>
           <button className="text-button" onClick={() => onPolicy("quality")}>Lees hoe kwaliteit en klachten werken <Icon n="arrow" /></button>
         </div>
         <div className="quality-checks">
-          <div><Icon n="shield" /><span><strong>Geverifieerde specialist</strong><small>Identiteit, vakgebied, ervaring en verzekering worden vóór productie gecontroleerd.</small></span></div>
+          <div><Icon n="shield" /><span><strong>Gecontroleerde specialist</strong><small>Identiteit, vakgebied, ervaring en verzekering worden vóór de uiteindelijke versie gecontroleerd.</small></span></div>
           <div><Icon n="file" /><span><strong>Bronnen en onzekerheid zichtbaar</strong><small>Geen bron betekent geen stellige conclusie. Ontbrekende feiten blijven in beeld.</small></span></div>
           <div><Icon n="lock" /><span><strong>Minimale gegevensdeling</strong><small>De specialist ziet alleen wat voor de beoordeling noodzakelijk is.</small></span></div>
         </div>
@@ -1903,7 +1917,7 @@ function HomeView({
               <span className="case-code">{c.id}</span>
               <strong>{c.title}</strong>
               <span>
-                {c.category} · {c.complexity} · {c.fee ? `vaste demoprijs €${c.fee} excl. btw` : "routecheck"}
+                {c.category} · {c.complexity} · {c.fee ? `vaste demoprijs €${c.fee} excl. btw` : "eerste beoordeling"}
               </span>
               <Icon n="arrow" />
             </button>
@@ -1939,21 +1953,21 @@ function PolicyPage({
       eyebrow: "PRIVACY / DEMOBELEID",
       title: "Deel alleen wat nodig is voor uw belastingvraag.",
       intro:
-        "Deze publieke MVP is geen beveiligde productieomgeving. Gebruik uitsluitend fictieve gegevens. De onderstaande principes beschrijven de bedoelde productwerking, niet een al afgeronde AVG-implementatie.",
+        "Deze publieke proefversie is geen beveiligde productieomgeving. Gebruik uitsluitend fictieve gegevens. De onderstaande principes beschrijven de bedoelde werking, niet een al volledig ingevoerde aanpak voor de AVG.",
       sections: [
         ["Wat de demo doet", "Vrije tekst wordt lokaal op herkenbare persoonsgegevens gecontroleerd. U ziet origineel en geanonimiseerd naast elkaar en moet de anonimisering zelf goedkeuren voordat de vraag verdergaat."],
         ["Wat de demo niet doet", "GitHub Pages biedt geen accountbeveiliging, versleutelde dossieropslag of gecontroleerde documentverwerking. Bestanden worden in deze versie niet geüpload; alleen bestandsnaam en grootte worden lokaal getoond."],
-        ["Productieprincipe", "Originele klantinput en de geanonimiseerde expertversie blijven strikt gescheiden. Alleen noodzakelijke gegevens gaan naar een specialist. Bewaartermijnen, verwijdering, inzage en verwerkersafspraken moeten vóór een echte pilot formeel zijn ingericht."],
+        ["Principe voor de uiteindelijke versie", "De oorspronkelijke informatie van de klant en de geanonimiseerde versie voor de specialist blijven strikt gescheiden. Alleen noodzakelijke gegevens gaan naar een specialist. Bewaartermijnen, verwijdering, inzage en afspraken met dienstverleners moeten vóór een echte proef formeel zijn ingericht."],
       ],
     },
     terms: {
       eyebrow: "PLATFORMROL / CONCEPT",
       title: "Duidelijk over wie wat doet.",
       intro:
-        "Fiscale Lijn is ontworpen als bemiddelaar en tussenpartij voor intake, matching, betaling en facturatie. De specialist geeft het definitieve advies en is daarvoor verantwoordelijk binnen de afgesproken scope.",
+        "Fiscale Lijn is ontworpen als bemiddelaar en tussenpartij voor vraaginvoer, keuze van een specialist, betaling en facturatie. De specialist geeft het definitieve advies en is daarvoor verantwoordelijk binnen de afgesproken afbakening.",
       sections: [
-        ["Rol van het platform", "Het platform structureert de vraag, ondersteunt anonimisering, doet een uitlegbare match en faciliteert betaling. Een AI-concept is nooit zelfstandig advies en wordt niet als eindantwoord geleverd."],
-        ["Rol van de specialist", "De gekozen specialist controleert feiten, aannames en bronnen, benoemt onzekerheden en levert het eindantwoord. Beroepskwalificaties en aansprakelijkheidsdekking moeten vóór toelating tot een productieplatform zijn geverifieerd."],
+        ["Rol van het platform", "Het platform ordent de vraag, ondersteunt anonimisering, legt uit waarom een specialist past en regelt de betaling. Een AI-concept is nooit zelfstandig advies en wordt niet als eindantwoord geleverd."],
+        ["Rol van de specialist", "De gekozen specialist controleert feiten, aannames en bronnen, benoemt onzekerheden en levert het eindantwoord. Beroepskwalificaties en aansprakelijkheidsdekking moeten vóór toelating tot de uiteindelijke versie zijn gecontroleerd."],
         ["Prijs en meerwerk", "De klant ziet vóór betaling een vaste totaalprijs exclusief btw. Extra vragen mogen de prijs alleen verhogen als het platform de noodzaak controleert en de klant daarna expliciet akkoord gaat."],
       ],
     },
@@ -1963,9 +1977,9 @@ function PolicyPage({
       intro:
         "Kwaliteit bestaat hier uit aantoonbare vakkennis, passende ervaring, brononderbouwing, transparante onzekerheid en een duidelijke route als iets misgaat.",
       sections: [
-        ["Toelating van specialisten", "Voor productie worden identiteit, relevante opleiding of registratie, specialisaties, ervaring en beroepsaansprakelijkheidsverzekering gecontroleerd. Reviews tellen pas mee na een afgeronde opdracht."],
-        ["Vaste antwoordstructuur", "Elk eindantwoord bevat: kort antwoord, betekenis voor de onderneming, concrete actie, deadline, onzekerheden, bronnen en het moment waarop aanvullende hulp nodig is."],
-        ["Klacht of twijfel", "De klant moet een antwoord kunnen markeren, een inhoudelijke reactie ontvangen en waar nodig escaleren naar platformcontrole. Doorlooptijden, herbeoordeling en eventuele restitutie worden vóór de betaalde pilot in een klachtenregeling vastgelegd."],
+        ["Toelating van specialisten", "Voor de uiteindelijke versie worden identiteit, relevante opleiding of registratie, specialisaties, ervaring en beroepsaansprakelijkheidsverzekering gecontroleerd. Beoordelingen tellen pas mee na een afgeronde opdracht."],
+        ["Vaste antwoordstructuur", "Elk eindantwoord bevat: kort antwoord, betekenis voor de onderneming, concrete actie, uiterste datum, onzekerheden, bronnen en het moment waarop aanvullende hulp nodig is."],
+        ["Klacht of twijfel", "De klant moet een antwoord kunnen markeren, een inhoudelijke reactie ontvangen en waar nodig hulp van het platform kunnen inschakelen. Doorlooptijden, herbeoordeling en eventuele terugbetaling worden vóór de betaalde proef in een klachtenregeling vastgelegd."],
       ],
     },
   }[type];
@@ -1986,7 +2000,7 @@ function PolicyPage({
           </article>
         ))}
       </div>
-      <div className="policy-warning"><Icon n="shield" /><span><strong>Belangrijk voor deze MVP</strong>Deze pagina is een product- en beleidsconcept, geen juridisch advies en geen vervanging voor definitieve voorwaarden, privacyverklaring of klachtenregeling.</span></div>
+      <div className="policy-warning"><Icon n="shield" /><span><strong>Belangrijk voor deze proefversie</strong>Deze pagina is een product- en beleidsconcept, geen juridisch advies en geen vervanging voor definitieve voorwaarden, privacyverklaring of klachtenregeling.</span></div>
     </section>
   );
 }
@@ -2161,7 +2175,7 @@ function StructuredCase({
           </div>
         </section>
         <section className="structure-card">
-          <div className="card-label">VOORGESTELDE MATCH</div>
+          <div className="card-label">VOORGESTELDE SPECIALIST</div>
           <div className="match-preview">
             <strong>{item.category}</strong>
             <span>{item.tags.join(" · ")}</span>
@@ -2173,7 +2187,7 @@ function StructuredCase({
             <div className="external-mini">
               <b>Extern AI-antwoord apart gehouden</b>
               <span>
-                De adviseur ziet dit als klantinput, niet als platformconclusie.
+                De adviseur ziet dit als informatie van de klant, niet als conclusie van het platform.
               </span>
             </div>
           )}
@@ -2283,7 +2297,7 @@ function Intake({
     <section className="page narrow">
       <div className="page-head">
         <div>
-          <p className="eyebrow">MKB / GRATIS ROUTECHECK</p>
+          <p className="eyebrow">MKB / GRATIS EERSTE BEOORDELING</p>
           <h1>Vertel wat er speelt in uw bedrijf.</h1>
           <p>
             Plak gerust een brief, e-mail, losse notities of een eerder
@@ -2312,7 +2326,7 @@ function Intake({
             rows={10}
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
-            placeholder="Bijvoorbeeld: 'Mijn eenmanszaak verkoopt advies en een online training. Ik twijfel over de btw...'. Alles wat relevant lijkt mag hier eerst in. Laat namen en persoonsgegevens weg."
+            placeholder="Bijvoorbeeld: 'Mijn eenmanszaak verkoopt advies en een online cursus. Ik twijfel over de btw...'. Alles wat relevant lijkt mag hier eerst in. Laat namen en persoonsgegevens weg."
           />
           <small className="helper">
             <Icon n="file" /> U hoeft zelf nog geen titel, categorie of fiscale
@@ -2327,11 +2341,11 @@ function Intake({
           <div className="intake-more-body">
             <div className="form-grid">
               <label>
-                Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Btw op advies en online training")} label="Voorbeeld" />
+                Voorlopige titel <small>optioneel</small> <ExampleButton onClick={() => set("title", "Btw op advies en online cursus")} label="Voorbeeld" />
                 <input
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
-                  placeholder="Bijv. btw op online training"
+                  placeholder="Bijv. btw op online cursus"
                 />
               </label>
               <label>
@@ -2397,7 +2411,7 @@ function Intake({
             rows={5}
             value={form.externalAi}
             onChange={(e) => set("externalAi", e.target.value)}
-            placeholder="Plak hier bijvoorbeeld een antwoord uit ChatGPT, Claude of een andere tool. Dit blijft zichtbaar als klantinput en wordt apart gecontroleerd."
+            placeholder="Plak hier bijvoorbeeld een antwoord uit ChatGPT, Claude of een ander hulpmiddel. Dit blijft zichtbaar als informatie van de klant en wordt apart gecontroleerd."
           />
           <small className="helper">
             <Icon n="file" /> Wij nemen dit antwoord niet automatisch over.
@@ -2468,7 +2482,7 @@ function Intake({
             Terug
           </button>
           <button className="button primary" type="submit" disabled={publicDemo && !demoAcknowledged}>
-            Gratis routecheck maken <Icon n="arrow" />
+            Eerste beoordeling maken <Icon n="arrow" />
           </button>
         </div>
       </form>
@@ -2535,7 +2549,7 @@ function Jobboard({
           <div>
             <p className="eyebrow">UW ADVISEURSPROFIEL</p>
             <h2>Mara van Dijk</h2>
-            <p className="muted">Loonheffingen-specialist · 4,8 van 5 uit 27 reviews · actief</p>
+            <p className="muted">Loonheffingen-specialist · 4,8 van 5 uit 27 beoordelingen · actief</p>
           </div>
           <div className="profile-details">
             <div><small>Specialisaties</small><b>Meerdere dienstbetrekkingen · werknemersverzekeringen · loonadministratie</b></div>
@@ -2562,7 +2576,7 @@ function Jobboard({
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Zoek op titel, tag of kernvraag" />
         </label>
         <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sorteer opdrachten">
-          <option value="match">Beste match</option>
+          <option value="match">Beste aansluiting</option>
           <option value="fee">Hoogste vergoeding</option>
           <option value="time">Kortste behandeltijd</option>
         </select>
@@ -2582,7 +2596,7 @@ function Jobboard({
                   {item.status === "PUBLISHED"
                     ? "Open"
                     : item.status === "CLAIMED"
-                      ? "Geclaimd"
+                      ? "Interesse getoond"
                       : "In behandeling"}
                 </span>
               </div>
@@ -2608,7 +2622,7 @@ function Jobboard({
                 <b>€{item.fee}</b>
               </div>
               <div>
-                <small>Match met profiel</small>
+                <small>Aansluiting op profiel</small>
                 <b className="match">{item.match}%</b>
               </div>
             </div>
@@ -2623,7 +2637,7 @@ function Jobboard({
         {visibleCases.length === 0 && (
           <div className="empty-state">
             <strong>{mode === "mine" ? "Nog geen eigen opdrachten" : search ? "Geen casus gevonden" : "Geen openstaande opdrachten"}</strong>
-            <span>{mode === "mine" ? "Geclaimde opdrachten verschijnen hier zodra een klant uw interesse heeft geselecteerd." : "Pas uw zoekopdracht aan of publiceer eerst een casus via de beheerdersrol."}</span>
+            <span>{mode === "mine" ? "Opdrachten verschijnen hier zodra een klant uw interesse heeft geselecteerd." : "Pas uw zoekopdracht aan of publiceer eerst een casus via de beheerdersrol."}</span>
           </div>
         )}
       </div>
@@ -2674,7 +2688,7 @@ function CaseDetail({
           <span className="case-code">{item.id}</span>
           <span className="category">{item.category}</span>
           <span className={`status ${item.status.toLowerCase()}`}>
-            {item.status.replace("_", " ")}
+            {statusText[item.status]}
           </span>
         </div>
         <h1>{item.title}</h1>
@@ -2692,7 +2706,7 @@ function CaseDetail({
           <span><small>Ontbrekend</small><b>{item.missing} feit{item.missing === 1 ? "" : "en"}</b></span>
         </div>
         {decision.action === "pay" && (
-          <button className="button primary" onClick={pay}>Controle starten en mockbetaling uitvoeren <Icon n="lock" /></button>
+          <button className="button primary" onClick={pay}>Controle starten en demobetaling uitvoeren <Icon n="lock" /></button>
         )}
         {decision.action === "specialist" && (
           <button className="button primary" onClick={() => scrollTo("specialist-keuze")}>Bekijk de specialist <Icon n="arrow" /></button>
@@ -2730,7 +2744,7 @@ function CaseDetail({
               <div className="block-title">
                 <span>02A</span>
                 <h2>Privédocumenten</h2>
-                <small>alleen zichtbaar voor u en de backend</small>
+                <small>alleen zichtbaar voor u en de beveiligde opslag</small>
               </div>
               <div className="attachment-list" aria-label="Opgeslagen privédocumenten">
                 {item.attachments.map((attachment) => (
@@ -2748,7 +2762,7 @@ function CaseDetail({
                   </div>
                 ))}
               </div>
-              <small className="helper"><Icon n="shield" /> In deze MVP is nog geen download- of virusscanfunctie actief.</small>
+              <small className="helper"><Icon n="shield" /> In deze proefversie is nog geen controle op virussen actief.</small>
             </section>
           )}
           <section className="section-block">
@@ -2759,7 +2773,7 @@ function CaseDetail({
             </div>
             <div className="ai-box">
               <div className="ai-label">
-                <span className="pulse" /> PLATFORM-ANALYSE · MOCK
+                <span className="pulse" /> EERSTE ANALYSE DOOR HET PLATFORM · DEMO
               </div>
               <p>{item.aiAnswer}</p>
               <div className="source-line">
@@ -2771,11 +2785,11 @@ function CaseDetail({
             {item.externalAi && (
               <div className="external-box">
                 <div className="ai-label">
-                  KLANTINPUT · AI-ANTWOORD UIT ANDERE BRON
+                  INFORMATIE VAN DE KLANT · AI-ANTWOORD UIT ANDERE BRON
                 </div>
                 <p>{customer ? item.externalAi : item.anonymizedExternalAi || item.externalAi}</p>
                 <small>
-                  Dit is door de klant aangeleverde input. Het platform neemt de
+                  Dit is door de klant aangeleverde informatie. Het platform neemt de
                   inhoud niet automatisch over.
                 </small>
               </div>
@@ -2803,7 +2817,7 @@ function CaseDetail({
               <div className="block-title">
                 <span>04</span>
                 <h2>Definitief gecontroleerd antwoord</h2>
-                <small className="confidence">menselijke review afgerond</small>
+                <small className="confidence">menselijke beoordeling afgerond</small>
               </div>
               <div className="final-answer-box">
                 <div className="ai-label">
@@ -2824,11 +2838,11 @@ function CaseDetail({
                 <div className="block-title">
                   <span>04</span>
                   <h2>Ontbrekend feit signaleren</h2>
-                  <small>fee alleen na platformbeoordeling</small>
+                  <small>toeslag alleen na beoordeling door het platform</small>
                 </div>
                 <p className="muted">
                   Stel alleen een vraag die noodzakelijk is voor een verantwoord oordeel.
-                  De regelengine beoordeelt eerst of een toeslag gerechtvaardigd is.
+                  De vaste beoordelingsregels bepalen eerst of een toeslag gerechtvaardigd is.
                 </p>
                 <div className="field-heading">
                   <span>Vraag aan de klant</span>
@@ -2870,7 +2884,7 @@ function CaseDetail({
                 <p>{item.informationRequests.at(-1)?.rationale}</p>
                 {item.informationRequests.at(-1)?.required_for_assessment && (
                   <small>
-                    Platformbeslissing · {item.informationRequests.at(-1)?.evaluation_confidence}% confidence · toeslag €{((item.informationRequests.at(-1)?.approved_fee_delta_cents || 0) / 100).toFixed(2)}
+                    Beslissing van het platform · {item.informationRequests.at(-1)?.evaluation_confidence}% zekerheid · toeslag €{((item.informationRequests.at(-1)?.approved_fee_delta_cents || 0) / 100).toFixed(2)}
                   </small>
                 )}
               </div>
@@ -2925,7 +2939,7 @@ function CaseDetail({
                 <b>{item.informationRequests.at(-1)?.question}</b>
                 <p>{item.informationRequests.at(-1)?.rationale}</p>
                 <small>
-                  Regelvoorstel · {item.informationRequests.at(-1)?.evaluation_confidence}% confidence · maximaal €{((item.informationRequests.at(-1)?.proposed_fee_delta_cents || 0) / 100).toFixed(2)}
+                  Voorstel op basis van vaste regels · {item.informationRequests.at(-1)?.evaluation_confidence}% zekerheid · maximaal €{((item.informationRequests.at(-1)?.proposed_fee_delta_cents || 0) / 100).toFixed(2)}
                 </small>
               </div>
               <p className="muted">
@@ -2989,7 +3003,7 @@ function CaseDetail({
             {customer && item.status === "CLAIMED" && item.claims?.length ? (
               <div className="claim-list" id="specialist-keuze">
                 <p className="eyebrow">SPECIALIST VOOR DEZE VRAAG</p>
-                <p className="claim-intro">Wij tonen eerst de beste inhoudelijke match. Alleen als er een reëel alternatief is, staat dat eronder.</p>
+                <p className="claim-intro">Wij tonen eerst de specialist die inhoudelijk het beste past. Alleen als er een reëel alternatief is, staat dat eronder.</p>
                 {[...item.claims]
                   .sort((left, right) => right.match_score - left.match_score)
                   .slice(0, 3)
@@ -2998,10 +3012,10 @@ function CaseDetail({
                     <span className="claim-rank">{index === 0 ? "AANBEVOLEN" : `ALTERNATIEF ${index}`}</span>
                     <b>{claim.expert_name}</b>
                     <span>
-                      {claim.expert_specialisation} · {claim.expert_rating.toFixed(1)} van 5 · {claim.match_score}% match
+                      {claim.expert_specialisation} · {claim.expert_rating.toFixed(1)} van 5 · {claim.match_score}% aansluiting
                     </span>
                     <small>{claim.message || "Beschikbaar voor deze casus."}</small>
-                    <small className="verification-note"><Icon n="shield" /> Demo-profiel — identiteit, vakbekwaamheid en verzekering moeten vóór productie zijn geverifieerd.</small>
+                    <small className="verification-note"><Icon n="shield" /> Demo-profiel — identiteit, vakbekwaamheid en verzekering moeten vóór de uiteindelijke versie worden gecontroleerd.</small>
                     {claim.status === "PENDING_CUSTOMER" && (
                       <button className="button secondary full" onClick={() => choose(item.id, claim.id)}>
                         {index === 0 ? "Kies aanbevolen specialist" : "Kies dit alternatief"}
@@ -3014,7 +3028,7 @@ function CaseDetail({
             {role === "advisor" &&
               (item.status === "PAID" || item.status === "IN_REVIEW") && (
                 <button className="button primary full" onClick={review}>
-                  Open reviewomgeving <Icon n="arrow" />
+                  Open beoordelingsomgeving <Icon n="arrow" />
                 </button>
               )}
             {customer && item.status === "DELIVERED" && (
@@ -3079,7 +3093,7 @@ function Review({
 }) {
   const [notes, setNotes] = useState("");
   const [finalAnswer, setFinalAnswer] = useState(
-    `Kort antwoord\n\nWat dit voor uw onderneming betekent\n\nWat u nu moet doen\n\nDeadline\n\nOnzekerheden en ontbrekende informatie\n\nBronnen\n\nWanneer extra hulp nodig is`,
+    `Kort antwoord\n\nWat dit voor uw onderneming betekent\n\nWat u nu moet doen\n\nUiterste datum\n\nOnzekerheden en ontbrekende informatie\n\nBronnen\n\nWanneer extra hulp nodig is`,
   );
   const [checks, setChecks] = useState([true, false, false, false]);
   const [verdict, setVerdict] = useState("");
@@ -3090,7 +3104,7 @@ function Review({
   const canSubmit = checks.every(Boolean) && Boolean(verdict) && finalAnswer.trim().length >= 80 && notes.trim().length >= 20;
   const fillExample = () => {
     setFinalAnswer(
-      `Kort antwoord\nDe conclusie uit het AI-concept is alleen bruikbaar nadat de onderliggende documenten zijn gecontroleerd.\n\nWat dit voor uw onderneming betekent\nEr kan een correctie of aangepaste verwerking nodig zijn; de precieze uitkomst hangt af van de bevestigde feiten.\n\nWat u nu moet doen\n1. Controleer de genoemde documenten.\n2. Leg de ontbrekende gegevens vast.\n3. Pas daarna de aangifte of administratie aan.\n\nDeadline\nHandel vóór de eerstvolgende aangifte- of reactiedatum.\n\nOnzekerheden en ontbrekende informatie\nDe relevante documenten zijn nog niet inhoudelijk geverifieerd.\n\nBronnen\n${item.source}.\n\nWanneer extra hulp nodig is\nLaat aanvullend beoordelen wanneer de documenten afwijken of de Belastingdienst al een standpunt heeft ingenomen.`,
+      `Kort antwoord\nDe conclusie uit het AI-concept is alleen bruikbaar nadat de onderliggende documenten zijn gecontroleerd.\n\nWat dit voor uw onderneming betekent\nEr kan een correctie of aangepaste verwerking nodig zijn; de precieze uitkomst hangt af van de bevestigde feiten.\n\nWat u nu moet doen\n1. Controleer de genoemde documenten.\n2. Leg de ontbrekende gegevens vast.\n3. Pas daarna de aangifte of administratie aan.\n\nUiterste datum\nHandel vóór de eerstvolgende aangifte- of reactiedatum.\n\nOnzekerheden en ontbrekende informatie\nDe relevante documenten zijn nog niet inhoudelijk gecontroleerd.\n\nBronnen\n${item.source}.\n\nWanneer extra hulp nodig is\nLaat aanvullend beoordelen wanneer de documenten afwijken of de Belastingdienst al een standpunt heeft ingenomen.`,
     );
     setNotes(
       "De AI-conclusie is inhoudelijk bruikbaar, maar de loonstroken en jaaropgaven moeten worden gecontroleerd. De onzekerheid en vervolgstap zijn daarom expliciet aan de klant uitgelegd.",
@@ -3102,10 +3116,10 @@ function Review({
     <section className="page">
       <div className="page-head">
         <div>
-          <p className="eyebrow">ADVISEUR / REVIEW</p>
+          <p className="eyebrow">ADVISEUR / INHOUDELIJKE BEOORDELING</p>
           <h1>Maak het antwoord betrouwbaar.</h1>
           <p>
-            Vergelijk de platformanalyse met klantinput en leg vast wat u heeft
+            Vergelijk de eerste analyse met de informatie van de klant en leg vast wat u heeft
             gecontroleerd.
           </p>
         </div>
@@ -3117,14 +3131,14 @@ function Review({
         <div>
           <div className="example-callout review-example-callout">
             <div>
-              <strong>Voorbeeldreview laden</strong>
+              <strong>Voorbeeldbeoordeling laden</strong>
               <span>Vult een controleerbaar antwoord, toelichting en controlepunten in.</span>
             </div>
             <ExampleButton onClick={fillExample} />
           </div>
           <div className="review-pane">
             <div className="pane-head">
-              <span>PLATFORM-ANALYSE</span>
+              <span>EERSTE ANALYSE DOOR HET PLATFORM</span>
               <em>AI-CONCEPT</em>
             </div>
             <p>{item.aiAnswer}</p>
@@ -3151,8 +3165,8 @@ function Review({
           {item.externalAi && (
             <div className="review-pane external-pane">
               <div className="pane-head">
-                <span>KLANTINPUT</span>
-                <em>EXTERN AI-ANTWOORD</em>
+                <span>INFORMATIE VAN DE KLANT</span>
+                <em>AI-ANTWOORD UIT ANDERE BRON</em>
               </div>
               <p>{item.anonymizedExternalAi || item.externalAi}</p>
               <small>
@@ -3178,7 +3192,7 @@ function Review({
             <p className="eyebrow">CONTROLEPUNTEN</p>
             {[
               "Feitenrelaas gecontroleerd",
-              "Bron en versie geverifieerd",
+              "Bron en versie gecontroleerd",
               "Ontbrekende informatie benoemd",
               "Onzekerheid duidelijk gemaakt",
             ].map((x, i) => (
@@ -3263,7 +3277,7 @@ function Admin({
           <p className="eyebrow">BEHEERDER / CONTROLE</p>
           <h1>Controle vóór publicatie.</h1>
           <p>
-            Bekijk anonimisering, status en auditsporen voordat een casus voor
+            Bekijk anonimisering, voortgang en het controlelogboek voordat een casus voor
             adviseurs zichtbaar wordt.
           </p>
         </div>
@@ -3281,11 +3295,11 @@ function Admin({
         </label>
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter casussen op status">
           <option>Alle statussen</option>
-          <option>PENDING_REVIEW</option>
-          <option>PUBLISHED</option>
-          <option>CLAIMED</option>
-          <option>IN_REVIEW</option>
-          <option>DELIVERED</option>
+          <option value="PENDING_REVIEW">Wacht op controle</option>
+          <option value="PUBLISHED">Beschikbaar voor adviseurs</option>
+          <option value="CLAIMED">Adviseur heeft interesse</option>
+          <option value="IN_REVIEW">In behandeling</option>
+          <option value="DELIVERED">Antwoord beschikbaar</option>
         </select>
         <span className="admin-result-count">{visibleCases.length} van {cases.length} casussen</span>
       </div>
@@ -3297,7 +3311,7 @@ function Admin({
                 <span className="case-code">{item.id}</span>
                 <strong>{item.title}</strong>
                 <small>
-                  {item.category} · status {item.status}
+                  {item.category} · {statusText[item.status]}
                 </small>
               </div>
               <div className="admin-actions">
@@ -3332,20 +3346,20 @@ function Admin({
             </p>
           </div>
           <small>
-            Originele input blijft alleen zichtbaar voor klant en beheerder. De
+            Oorspronkelijke informatie blijft alleen zichtbaar voor klant en beheerder. De
             demo vervangt herkenbare patronen lokaal.
           </small>
         </div>
       </div>
       <div className="audit">
-        <p className="eyebrow">AUDITLOG</p>
+        <p className="eyebrow">CONTROLELOGBOEK</p>
         {auditItems.length === 0 && <small>Nog geen statuswijzigingen beschikbaar.</small>}
         {auditItems.map((event, index) => (
           <div key={`${event.id}-${event.label}-${index}`}>
             <span>{event.date}</span>
-            <b>Case {event.id}</b>
+            <b>Casus {event.id}</b>
             <span>{event.label}</span>
-            <small>{event.label.toLowerCase().includes("ai") ? "mock adapter · geen externe provider" : "statuswijziging · demo auditspoor"}</small>
+            <small>{event.label.toLowerCase().includes("ai") ? "demofunctie · geen externe AI-dienst" : "voortgangswijziging · controlelogboek van de demo"}</small>
           </div>
         ))}
       </div>

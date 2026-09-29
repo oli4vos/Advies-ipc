@@ -17,13 +17,13 @@ function routeCheckSummary(result: ApiCase) {
     : 'Er zijn op dit moment geen open punten in de eerste structurering.'
 
   return [
-    'Uw routecheck is opgeslagen.',
+    'Uw eerste beoordeling is opgeslagen.',
     '',
     `Onderwerp: ${result.category}`,
     `Samenvatting: ${result.summary}`,
     openPoints,
     '',
-    'Controleer de gestructureerde intake. AI-output is een concept en geen definitief belastingadvies.',
+    'Controleer de geordende vraag. De tekst van AI is een concept en geen definitief belastingadvies.',
   ].join('\n')
 }
 
@@ -57,16 +57,16 @@ export function useChat() {
             id: `${Date.now()}-demo`,
             role: 'ai',
             content:
-              'Dit is de publieke demo. Gebruik uitsluitend fictieve gegevens. In de lokale MVP wordt uw verhaal via de centrale FastAPI-casusflow gestructureerd; op GitHub Pages wordt niets doorgestuurd.',
+              'Dit is de publieke proefversie. Gebruik uitsluitend fictieve gegevens. In de lokale versie wordt uw verhaal via één centrale werkwijze geordend; op GitHub Pages wordt niets doorgestuurd.',
             timestamp: new Date(),
           },
         ])
-        toast.success('Demo-routecheck uitgevoerd')
+        toast.success('Eerste beoordeling uitgevoerd')
         return
       }
 
       const result = await createCase({
-        title: 'Vrije intake via routecheck',
+        title: 'Vrije vraag voor eerste beoordeling',
         description: content.trim(),
         question: content.trim(),
         category: 'Weet ik niet',
@@ -86,7 +86,7 @@ export function useChat() {
             {
               id: `${Date.now()}-attachment`,
               role: 'ai',
-              content: `Document ${attachment.original_name} is lokaal gecontroleerd en veilig opgeslagen. Scanstatus: ${attachment.scan_status}.`,
+              content: `Document ${attachment.original_name} is lokaal gecontroleerd en veilig opgeslagen. Uitkomst van de veiligheidscontrole: ${attachment.scan_status}.`,
               timestamp: new Date(),
             },
           ])
@@ -111,11 +111,11 @@ export function useChat() {
           timestamp: new Date(),
         },
       ])
-      toast.success('Routecheck opgeslagen')
+      toast.success('Eerste beoordeling opgeslagen')
     } catch (err) {
       console.error('Routecheck error:', err)
-      setError('De routecheck kon niet worden opgeslagen. Probeer het opnieuw.')
-      toast.error('Routecheck mislukt')
+      setError('De eerste beoordeling kon niet worden opgeslagen. Probeer het opnieuw.')
+      toast.error('Eerste beoordeling mislukt')
     } finally {
       setIsLoading(false)
     }
@@ -145,7 +145,7 @@ export function useChat() {
         {
           id: `${Date.now()}-file`,
           role: 'user',
-          content: `📎 ${file.name} geselecteerd. In de publieke demo wordt dit bestand niet doorgestuurd.`,
+          content: `Document: ${file.name} geselecteerd. In de publieke proefversie wordt dit bestand niet doorgestuurd.`,
           timestamp: new Date(),
         },
       ])
@@ -160,11 +160,11 @@ export function useChat() {
         {
           id: `${Date.now()}-file`,
           role: 'user',
-          content: `📎 ${file.name} klaar voor upload. Verstuur eerst je belastingvraag; daarna controleert de lokale scanner het document.`,
+          content: `Document: ${file.name} staat klaar. Verstuur eerst uw belastingvraag; daarna controleert de lokale veiligheidscontrole het document.`,
           timestamp: new Date(),
         },
       ])
-      toast.success('Document klaar voor upload')
+      toast.success('Document klaar om te verzenden')
       return
     }
 
@@ -175,7 +175,7 @@ export function useChat() {
         {
           id: `${Date.now()}-file`,
           role: 'ai',
-          content: `Document ${attachment.original_name} is lokaal gecontroleerd en veilig opgeslagen. Scanstatus: ${attachment.scan_status}.`,
+          content: `Document ${attachment.original_name} is lokaal gecontroleerd en veilig opgeslagen. Uitkomst van de veiligheidscontrole: ${attachment.scan_status}.`,
           timestamp: new Date(),
         },
       ])

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { BusinessCase } from "../page";
 
 export const metadata: Metadata = {
-  title: "Investeerderscase | Fiscale Lijn",
+  title: "Voor investeerders | Fiscale Lijn",
   description:
-    "De investeerderscase van Fiscale Lijn: probleem, marktplaatsmodel, go-to-market, unit economics, vijfjarenplan en belangrijkste validatierisico's.",
+    "Het voorstel voor investeerders: het probleem, het vraag-en-aanbodmodel, de marktbenadering, opbrengsten, kosten, het vijfjarenplan en de belangrijkste risico's.",
   robots: {
     index: false,
     follow: false,

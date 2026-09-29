@@ -82,7 +82,7 @@ export function FileUpload({ onUpload, disabled = false }: FileUploadProps) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        title="Upload document (PDF, DOC, DOCX, PNG, JPG, TXT)"
+        title="Document toevoegen (PDF, DOC, DOCX, PNG, JPG of TXT)"
       >
         <DocumentArrowUpIcon className="h-5 w-5 text-gray-600" />
       </button>
